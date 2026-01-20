@@ -1,0 +1,417 @@
+/**
+ * Task Center - Global Styles
+ * Based on Data Masker Claude Theme
+ */
+
+/* ============================================================================
+   CSS VARIABLES - CLAUDE DARK THEME
+   ============================================================================ */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #232323;
+  --bg-surface: #2d2d2d;
+  --bg-elevated: #3d3d3d;
+  --bg-hover: #404040;
+  --bg-active: #4a4a4a;
+
+  /* Borders */
+  --border: #4d4d4d;
+  --border-light: #5d5d5d;
+
+  /* Accent Colors - Claude Orange */
+  --accent: #D97757;
+  --accent-hover: #E88968;
+  --accent-active: #c66646;
+
+  /* Text Colors */
+  --text-primary: #ececec;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+
+  /* Priority colors */
+  --priority-critical: #f87171;
+  --priority-high: #fbbf24;
+  --priority-medium: #60a5fa;
+  --priority-low: #4ade80;
+  --priority-backlog: #737373;
+
+  /* Status colors */
+  --status-new: #60a5fa;
+  --status-progress: #fbbf24;
+  --status-done: #4ade80;
+  --status-blocked: #f87171;
+
+  /* Semantic Colors */
+  --success: #4ade80;
+  --success-dark: #22c55e;
+  --warning: #fbbf24;
+  --warning-dark: #f59e0b;
+  --error: #f87171;
+  --error-dark: #ef4444;
+  --info: #60a5fa;
+  --info-dark: #3b82f6;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Fonts */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'Consolas', 'Monaco', monospace;
+}
+
+/* ============================================================================
+   CLAUDE LIGHT THEME
+   ============================================================================ */
+
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-primary: #FAF9F7;
+  --bg-secondary: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F5F4F2;
+  --bg-hover: #EEEDEB;
+  --bg-active: #E5E4E2;
+
+  /* Borders */
+  --border: #D5D4D2;
+  --border-light: #E5E4E2;
+
+  /* Accent Colors */
+  --accent: #C45D3A;
+  --accent-hover: #B34E2D;
+  --accent-active: #A24022;
+
+  /* Text Colors */
+  --text-primary: #1A1A1A;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+
+  /* Priority colors - darker for light theme */
+  --priority-critical: #dc2626;
+  --priority-high: #d97706;
+  --priority-medium: #2563eb;
+  --priority-low: #16a34a;
+  --priority-backlog: #6b7280;
+
+  /* Status colors */
+  --status-new: #2563eb;
+  --status-progress: #d97706;
+  --status-done: #16a34a;
+  --status-blocked: #dc2626;
+}
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================================
+   SCROLLBARS
+   ============================================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
+}
+
+/* ============================================================================
+   APP CONTAINER
+   ============================================================================ */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-details {
+  position: relative;
+  width: 480px;
+  min-width: 320px;
+  max-width: 800px;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   BUTTONS
+   ============================================================================ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+
+.btn-icon {
+  padding: var(--spacing-xs);
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ============================================================================
+   BADGES
+   ============================================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-critical {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--priority-critical);
+}
+
+.badge-high {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--priority-high);
+}
+
+.badge-medium {
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--priority-medium);
+}
+
+.badge-low {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--priority-low);
+}
+
+.badge-backlog {
+  background: rgba(115, 115, 115, 0.2);
+  color: var(--priority-backlog);
+}
+
+/* Status badges */
+.badge-new {
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--status-new);
+}
+
+.badge-progress {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--status-progress);
+}
+
+.badge-done {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--status-done);
+}
+
+.badge-blocked {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--status-blocked);
+}
+
+/* ============================================================================
+   INPUTS
+   ============================================================================ */
+
+.input {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.input:focus {
+  border-color: var(--accent);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================================================
+   LOADING
+   ============================================================================ */
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: var(--spacing-md);
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   PANELS & CARDS
+   ============================================================================ */
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.panel-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.panel-body {
+  padding: var(--spacing-md);
+}
+
+/* ============================================================================
+   THEME TOGGLE
+   ============================================================================ */
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+}

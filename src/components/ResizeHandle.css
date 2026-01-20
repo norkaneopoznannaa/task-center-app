@@ -1,0 +1,53 @@
+/* ============================================================================
+   RESIZE HANDLE
+   ============================================================================ */
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resize-handle-left {
+  left: -4px;
+}
+
+.resize-handle-right {
+  right: -4px;
+}
+
+.resize-handle-line {
+  width: 3px;
+  height: 40px;
+  background: var(--border);
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.resize-handle:hover .resize-handle-line,
+.resize-handle.dragging .resize-handle-line {
+  opacity: 1;
+  background: var(--accent);
+}
+
+.resize-handle.dragging {
+  cursor: col-resize;
+}
+
+/* Overlay when dragging to prevent text selection */
+.resize-handle.dragging::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+}
