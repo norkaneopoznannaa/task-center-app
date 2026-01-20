@@ -76,11 +76,43 @@ export function WorklogsPage({ tasks }: WorklogsPageProps) {
     setSelectedDate(new Date().toISOString().split('T')[0]);
   };
 
+  // Format datetime for Jira API
+  const formatJiraDateTime = (date: string, time: string): string => {
+    const dateObj = new Date(`${date}T${time}:00`);
+    const offsetMinutes = -dateObj.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date}T${time}:00.000${offsetSign}${pad(offsetHours)}${pad(offsetMins)}`;
+  };
+
   // Delete worklog
   const handleDelete = async (id: string) => {
-    if (!confirm('Удалить запись?')) return;
+    const worklog = worklogs.find(w => w.id === id);
+    if (!worklog) return;
+
+    // Check if synced - ask about Jira deletion
+    const isSynced = worklog.status === 'synced' && worklog.jiraWorklogId && worklog.jiraKey;
+    const confirmMessage = isSynced
+      ? 'Удалить запись? Она также будет удалена из Jira.'
+      : 'Удалить запись?';
+
+    if (!confirm(confirmMessage)) return;
 
     try {
+      // If synced, delete from Jira first
+      if (isSynced) {
+        toast.loading('Удаление из Jira...', { id: 'jira-delete' });
+        const jiraResult = await window.api.deleteJiraWorklog(worklog.jiraKey!, worklog.jiraWorklogId!);
+        if (!jiraResult.success) {
+          toast.error(`Ошибка удаления из Jira: ${jiraResult.error}`, { id: 'jira-delete' });
+          return;
+        }
+        toast.success('Удалено из Jira', { id: 'jira-delete' });
+      }
+
+      // Delete locally
       const result = await window.api.deleteWorklog(id);
       if (result.success) {
         toast.success('Запись удалена');
@@ -97,7 +129,38 @@ export function WorklogsPage({ tasks }: WorklogsPageProps) {
   const handleSaveWorklog = async (data: WorklogFormData, id?: string) => {
     try {
       if (id) {
-        // Update
+        // Update existing worklog
+        const existingWorklog = worklogs.find(w => w.id === id);
+        const isSynced = existingWorklog?.status === 'synced' &&
+                         existingWorklog?.jiraWorklogId &&
+                         existingWorklog?.jiraKey;
+
+        // If synced, update in Jira first
+        if (isSynced && data.jiraKey) {
+          toast.loading('Обновление в Jira...', { id: 'jira-update' });
+
+          // Calculate duration
+          const [startH, startM] = data.startTime.split(':').map(Number);
+          const [endH, endM] = data.endTime.split(':').map(Number);
+          const durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+          const timeSpentSeconds = durationMinutes * 60;
+
+          const jiraResult = await window.api.updateJiraWorklog(
+            data.jiraKey,
+            existingWorklog!.jiraWorklogId!,
+            formatJiraDateTime(data.date, data.startTime),
+            timeSpentSeconds,
+            data.description
+          );
+
+          if (!jiraResult.success) {
+            toast.error(`Ошибка обновления в Jira: ${jiraResult.error}`, { id: 'jira-update' });
+            return;
+          }
+          toast.success('Обновлено в Jira', { id: 'jira-update' });
+        }
+
+        // Update locally
         const result = await window.api.updateWorklog(id, data);
         if (result.success) {
           toast.success('Запись обновлена');
