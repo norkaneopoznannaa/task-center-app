@@ -388,6 +388,43 @@ export async function addJiraWorklog(
   return { success: false, error: result.error };
 }
 
+// Обновить worklog в Jira
+export async function updateJiraWorklog(
+  issueKey: string,
+  worklogId: string,
+  started: string,
+  timeSpentSeconds: number,
+  comment: string
+): Promise<{ success: boolean; error?: string }> {
+  const body = {
+    started: started,
+    timeSpentSeconds: timeSpentSeconds,
+    comment: comment
+  };
+
+  const result = await makeJiraRequest('PUT', `/rest/api/2/issue/${issueKey}/worklog/${worklogId}`, body);
+
+  if (result.success) {
+    return { success: true };
+  }
+
+  return { success: false, error: result.error };
+}
+
+// Удалить worklog из Jira
+export async function deleteJiraWorklog(
+  issueKey: string,
+  worklogId: string
+): Promise<{ success: boolean; error?: string }> {
+  const result = await makeJiraRequest('DELETE', `/rest/api/2/issue/${issueKey}/worklog/${worklogId}`);
+
+  if (result.success || result.statusCode === 204) {
+    return { success: true };
+  }
+
+  return { success: false, error: result.error };
+}
+
 // Получить информацию о задаче Jira
 export async function getJiraIssue(issueKey: string): Promise<{ success: boolean; issue?: unknown; error?: string }> {
   const result = await makeJiraRequest('GET', `/rest/api/2/issue/${issueKey}?fields=summary,status,assignee`);

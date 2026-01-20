@@ -17,7 +17,7 @@ function App() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
   const [activeTimers, setActiveTimers] = useState<Record<string, { startTime: Date; elapsed: number }>>({});
   const [filters, setFilters] = useState<TaskFilters>({
     status: 'all',
@@ -31,7 +31,7 @@ function App() {
   });
   const [detailsWidth, setDetailsWidth] = useState(() => {
     const saved = localStorage.getItem('task-center-details-width');
-    return saved ? parseInt(saved, 10) : 480;
+    return saved ? parseInt(saved, 10) : 560;
   });
   const [activePage, setActivePage] = useState<Page>('tasks');
 

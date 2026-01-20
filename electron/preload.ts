@@ -48,6 +48,12 @@ contextBridge.exposeInMainWorld('api', {
   testJiraConnection: () => ipcRenderer.invoke('test-jira-connection'),
   addJiraWorklog: (issueKey: string, started: string, timeSpentSeconds: number, comment: string) =>
     ipcRenderer.invoke('add-jira-worklog', issueKey, started, timeSpentSeconds, comment),
+  updateJiraWorklog: (issueKey: string, worklogId: string, started: string, timeSpentSeconds: number, comment: string) =>
+    ipcRenderer.invoke('update-jira-worklog', issueKey, worklogId, started, timeSpentSeconds, comment),
+  deleteJiraWorklog: (issueKey: string, worklogId: string) =>
+    ipcRenderer.invoke('delete-jira-worklog', issueKey, worklogId),
+  getJiraIssue: (issueKey: string) =>
+    ipcRenderer.invoke('get-jira-issue', issueKey),
 });
 
 // Input types for API calls
@@ -134,8 +140,25 @@ declare global {
       saveJiraConfig: (config: JiraConfigInput) => Promise<{ success: boolean; error?: string }>;
       testJiraConnection: () => Promise<{ success: boolean; user?: string; error?: string }>;
       addJiraWorklog: (issueKey: string, started: string, timeSpentSeconds: number, comment: string) => Promise<{ success: boolean; worklogId?: string; error?: string }>;
+      updateJiraWorklog: (issueKey: string, worklogId: string, started: string, timeSpentSeconds: number, comment: string) => Promise<{ success: boolean; error?: string }>;
+      deleteJiraWorklog: (issueKey: string, worklogId: string) => Promise<{ success: boolean; error?: string }>;
+      getJiraIssue: (issueKey: string) => Promise<{ success: boolean; issue?: JiraIssue; error?: string }>;
     };
   }
+}
+
+interface JiraIssue {
+  key: string;
+  fields: {
+    summary: string;
+    status: {
+      name: string;
+    };
+    assignee?: {
+      displayName: string;
+      name: string;
+    };
+  };
 }
 
 interface TasksData {

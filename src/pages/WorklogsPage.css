@@ -255,3 +255,37 @@
   background: var(--priority-critical);
   color: white;
 }
+
+/* Action buttons for worklog items */
+.btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-action svg {
+  flex-shrink: 0;
+}
+
+.btn-edit:hover {
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--priority-medium);
+}
+
+.btn-delete:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--priority-critical);
+}

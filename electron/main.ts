@@ -332,6 +332,21 @@ ipcMain.handle('add-jira-worklog', async (_event, issueKey: string, started: str
   return jiraConfig.addJiraWorklog(issueKey, started, timeSpentSeconds, comment);
 });
 
+// Обновить worklog в Jira
+ipcMain.handle('update-jira-worklog', async (_event, issueKey: string, worklogId: string, started: string, timeSpentSeconds: number, comment: string) => {
+  return jiraConfig.updateJiraWorklog(issueKey, worklogId, started, timeSpentSeconds, comment);
+});
+
+// Удалить worklog из Jira
+ipcMain.handle('delete-jira-worklog', async (_event, issueKey: string, worklogId: string) => {
+  return jiraConfig.deleteJiraWorklog(issueKey, worklogId);
+});
+
+// Получить информацию о задаче из Jira
+ipcMain.handle('get-jira-issue', async (_event, issueKey: string) => {
+  return jiraConfig.getJiraIssue(issueKey);
+});
+
 // ============================================================================
 // APP LIFECYCLE
 // ============================================================================

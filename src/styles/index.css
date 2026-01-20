@@ -96,10 +96,10 @@
   --border: #D5D4D2;
   --border-light: #E5E4E2;
 
-  /* Accent Colors */
-  --accent: #C45D3A;
-  --accent-hover: #B34E2D;
-  --accent-active: #A24022;
+  /* Accent Colors - приглушённый терракотовый */
+  --accent: #B8725A;
+  --accent-hover: #A86650;
+  --accent-active: #985A46;
 
   /* Text Colors */
   --text-primary: #1A1A1A;

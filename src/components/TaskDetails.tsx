@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Task, STATUS_LABELS, PRIORITY_LABELS } from '../types';
 import './TaskDetails.css';
 
@@ -11,6 +11,26 @@ interface TaskDetailsProps {
   activeTimers: Record<string, { startTime: Date; elapsed: number }>;
 }
 
+// Округление до 30 минут (вверх)
+const roundTo30Minutes = (minutes: number): number => {
+  if (minutes <= 0) return 0;
+  return Math.ceil(minutes / 30) * 30;
+};
+
+// Форматирование даты для Jira API (ISO 8601 с timezone)
+const formatJiraDateTime = (date: Date): string => {
+  const offsetMinutes = -date.getTimezoneOffset();
+  const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+  const offsetMins = Math.abs(offsetMinutes) % 60;
+  const offsetSign = offsetMinutes >= 0 ? '+' : '-';
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T` +
+         `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.000` +
+         `${offsetSign}${pad(offsetHours)}${pad(offsetMins)}`;
+};
+
 export const TaskDetails: React.FC<TaskDetailsProps> = ({
   task,
   onClose,
@@ -19,6 +39,48 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
   onStopTimer,
   activeTimers,
 }) => {
+  // Состояние для экспорта в Jira
+  const [jiraExportState, setJiraExportState] = useState<{
+    loading: boolean;
+    success: boolean;
+    error: string | null;
+    exportedMinutes: number | null;
+  }>({ loading: false, success: false, error: null, exportedMinutes: null });
+
+  // Функция экспорта worklog в Jira
+  const handleExportToJira = async () => {
+    if (!task || !task.jira_references || task.jira_references.length === 0) {
+      setJiraExportState({ loading: false, success: false, error: 'Нет связанной Jira задачи', exportedMinutes: null });
+      return;
+    }
+
+    const totalMinutes = task.time_tracking?.total_minutes || 0;
+    if (totalMinutes <= 0) {
+      setJiraExportState({ loading: false, success: false, error: 'Нет отработанного времени', exportedMinutes: null });
+      return;
+    }
+
+    const roundedMinutes = roundTo30Minutes(totalMinutes);
+    const timeSpentSeconds = roundedMinutes * 60;
+    const jiraKey = task.jira_references[0].ticket_id;
+    const started = formatJiraDateTime(new Date());
+    const comment = `${task.title}\n\nВремя: ${totalMinutes} мин -> ${roundedMinutes} мин (округлено до 30 мин)`;
+
+    setJiraExportState({ loading: true, success: false, error: null, exportedMinutes: null });
+
+    try {
+      const result = await window.api.addJiraWorklog(jiraKey, started, timeSpentSeconds, comment);
+
+      if (result.success) {
+        setJiraExportState({ loading: false, success: true, error: null, exportedMinutes: roundedMinutes });
+      } else {
+        setJiraExportState({ loading: false, success: false, error: result.error || 'Ошибка экспорта', exportedMinutes: null });
+      }
+    } catch (err) {
+      setJiraExportState({ loading: false, success: false, error: String(err), exportedMinutes: null });
+    }
+  };
+
   if (!task) {
     return (
       <div className="task-details-empty">
@@ -201,6 +263,41 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
                 </button>
               )}
             </div>
+
+            {/* Экспорт в Jira */}
+            {task.jira_references && task.jira_references.length > 0 && (
+              <div className="jira-export-section">
+                <div className="jira-export-info">
+                  <span className="jira-target">
+                    Jira: {task.jira_references[0].ticket_id}
+                  </span>
+                  {totalMinutes > 0 && (
+                    <span className="jira-time-preview">
+                      {formatDuration(totalMinutes)} → {formatDuration(roundTo30Minutes(totalMinutes))}
+                    </span>
+                  )}
+                </div>
+                <button
+                  className={`btn btn-jira ${jiraExportState.loading ? 'loading' : ''} ${jiraExportState.success ? 'success' : ''}`}
+                  onClick={handleExportToJira}
+                  disabled={jiraExportState.loading || totalMinutes <= 0 || isTimerActive}
+                  title={isTimerActive ? 'Остановите таймер перед экспортом' : totalMinutes <= 0 ? 'Нет времени для экспорта' : `Экспортировать ${formatDuration(roundTo30Minutes(totalMinutes))} в Jira`}
+                >
+                  {jiraExportState.loading ? (
+                    '⏳ Выгрузка...'
+                  ) : jiraExportState.success ? (
+                    `✓ Выгружено ${formatDuration(jiraExportState.exportedMinutes || 0)}`
+                  ) : (
+                    '📤 Выгрузить в Jira'
+                  )}
+                </button>
+                {jiraExportState.error && (
+                  <div className="jira-export-error">
+                    ⚠️ {jiraExportState.error}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -295,57 +392,38 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
           </div>
         </div>
 
-        {/* Context */}
-        {task.context && (
+        {/* User Notes - главный блок заметок */}
+        {task.user_notes && (
           <div className="detail-section">
-            <label>Контекст</label>
-            {task.context.analysis && (
-              <div className="context-block">
-                <span className="context-label">Анализ:</span>
-                <p>{typeof task.context.analysis === 'string'
-                  ? task.context.analysis
-                  : JSON.stringify(task.context.analysis, null, 2)}</p>
-              </div>
-            )}
-            {task.context.relevant_docs && task.context.relevant_docs.length > 0 && (
-              <div className="context-block">
-                <span className="context-label">Документы:</span>
-                <ul>
-                  {task.context.relevant_docs.map((doc, i) => (
-                    <li key={i}>{typeof doc === 'string' ? doc : JSON.stringify(doc)}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {/* Render other context fields */}
-            {Object.entries(task.context)
-              .filter(([key]) => key !== 'analysis' && key !== 'relevant_docs')
-              .map(([key, value]) => (
-                <div key={key} className="context-block">
-                  <span className="context-label">{key}:</span>
-                  <p>{typeof value === 'string'
-                    ? value
-                    : JSON.stringify(value, null, 2)}</p>
-                </div>
-              ))}
-          </div>
-        )}
-
-        {/* Clarifications */}
-        {task.clarifications && Object.keys(task.clarifications).length > 0 && (
-          <div className="detail-section">
-            <label>Уточнения</label>
-            <div className="clarifications">
-              {Object.entries(task.clarifications).map(([key, value]) => (
-                <div key={key} className="clarification-item">
-                  <span className="clarification-key">{key}:</span>
-                  <span className="clarification-value">
-                    {typeof value === 'string' ? value : JSON.stringify(value)}
-                  </span>
-                </div>
+            <label>Заметки</label>
+            <div className="user-notes">
+              {task.user_notes.split('\n').map((line, i) => (
+                <p key={i} className={line.startsWith('**') || line.startsWith('СРОЧНО') ? 'note-important' : ''}>
+                  {line || '\u00A0'}
+                </p>
               ))}
             </div>
           </div>
+        )}
+
+        {/* Tags/Labels from clarifications - только важные метки */}
+        {task.clarifications && (
+          (task.clarifications.urgent || task.clarifications.deadline || task.clarifications.first_document) && (
+            <div className="detail-section">
+              <label>Метки</label>
+              <div className="task-labels">
+                {task.clarifications.urgent && (
+                  <span className="label label-urgent">СРОЧНО</span>
+                )}
+                {task.clarifications.deadline && (
+                  <span className="label label-deadline">Дедлайн: {String(task.clarifications.deadline)}</span>
+                )}
+                {task.clarifications.first_document && (
+                  <span className="label label-info">{String(task.clarifications.first_document)}</span>
+                )}
+              </div>
+            </div>
+          )
         )}
       </div>
     </div>
