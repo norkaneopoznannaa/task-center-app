@@ -1,0 +1,129 @@
+.virtualized-task-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.virtualized-task-list.empty {
+  min-height: 200px;
+}
+
+.virtualized-task-list .task-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.virtualized-task-list .task-table thead {
+  background: #16162a;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.virtualized-task-list .task-table th {
+  padding: 10px 8px;
+  text-align: left;
+  color: #888;
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.virtual-list-body {
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a6a #1a1a2e;
+}
+
+.virtual-list-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.virtual-list-body::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+.virtual-list-body::-webkit-scrollbar-thumb {
+  background: #4a4a6a;
+  border-radius: 4px;
+}
+
+.virtual-list-body::-webkit-scrollbar-thumb:hover {
+  background: #5a5a7a;
+}
+
+.virtual-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #2a2a4a;
+  transition: background-color 0.15s ease;
+}
+
+.virtual-row:hover {
+  background: rgba(74, 144, 217, 0.1);
+}
+
+.virtual-row.selected {
+  background: rgba(74, 144, 217, 0.2);
+  border-left: 3px solid #4a90d9;
+}
+
+.virtual-row .task-table-row {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.virtual-row .task-table-row td {
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.empty-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  color: #666;
+  font-size: 14px;
+}
+
+.list-footer {
+  padding: 8px 12px;
+  background: #16162a;
+  border-top: 1px solid #2a2a4a;
+  color: #666;
+  font-size: 12px;
+  text-align: right;
+}
+
+/* Performance optimization: reduce paint area */
+.virtual-row * {
+  will-change: auto;
+}
+
+/* Smooth scrolling for the list */
+.virtual-list-body {
+  scroll-behavior: smooth;
+}
+
+/* Animation for new items */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.virtual-row {
+  animation: fadeIn 0.15s ease-out;
+}

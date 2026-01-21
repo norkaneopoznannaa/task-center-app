@@ -1,0 +1,402 @@
+/* ============================================================================
+   DAILY PLAN COMPONENT
+   ============================================================================ */
+
+.daily-plan {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Header */
+.daily-plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-md);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.plan-icon {
+  font-size: 18px;
+}
+
+.plan-title h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.plan-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.task-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+}
+
+.time-estimate {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Content */
+.daily-plan-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xs);
+}
+
+/* No Tasks */
+.no-tasks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--text-muted);
+}
+
+.no-tasks-icon {
+  font-size: 32px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.no-tasks p {
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Task List */
+.plan-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* Task Item */
+.plan-task {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.plan-task:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.plan-task.active {
+  border-color: var(--accent);
+  background: rgba(217, 119, 87, 0.1);
+}
+
+/* Drag handle */
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: grab;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast);
+  letter-spacing: -2px;
+}
+
+.plan-task:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Drag states - dnd-kit */
+.plan-task.dragging {
+  opacity: 0.95;
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  cursor: grabbing;
+}
+
+.plan-task[style*="transform"] {
+  /* Анимация для соседних элементов */
+  transition: transform 200ms ease;
+}
+
+/* Reset order button */
+.reset-order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.reset-order-btn:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Task Rank */
+.task-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 32px;
+}
+
+.rank-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.rank-icon {
+  font-size: 12px;
+}
+
+/* Task Info */
+.task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 4px;
+}
+
+.task-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jira-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--bg-elevated);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  white-space: nowrap;
+}
+
+/* Task Meta */
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.priority-tag,
+.category-tag,
+.deadline-tag,
+.time-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.category-tag {
+  font-weight: 500;
+}
+
+.category-tag.remd {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+.category-tag.kufer {
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+}
+
+.category-tag.common {
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+}
+
+.category-tag.auto {
+  background: rgba(156, 163, 175, 0.2);
+  color: #9ca3af;
+}
+
+.category-tag.default {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+.priority-tag {
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.priority-tag.critical {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--priority-critical);
+}
+
+.priority-tag.high {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--priority-high);
+}
+
+.priority-tag.medium {
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--priority-medium);
+}
+
+.priority-tag.low {
+  background: rgba(74, 222, 128, 0.2);
+  color: var(--priority-low);
+}
+
+.priority-tag.backlog {
+  background: rgba(115, 115, 115, 0.2);
+  color: var(--priority-backlog);
+}
+
+.score-tag {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.deadline-tag {
+  font-weight: 500;
+}
+
+.deadline-tag.overdue {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--error);
+}
+
+.deadline-tag.today {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--warning);
+}
+
+.deadline-tag.tomorrow {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--warning);
+}
+
+.deadline-tag.week {
+  background: rgba(96, 165, 250, 0.15);
+  color: var(--info);
+}
+
+.deadline-tag.later {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.time-tag {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+/* Start Button */
+.start-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.start-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.start-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 87, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(217, 119, 87, 0);
+  }
+}
+
+/* Footer */
+.daily-plan-footer {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}
+
+.recommendation {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.rec-icon {
+  font-size: 14px;
+}
+
+.rec-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
