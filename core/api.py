@@ -31,7 +31,7 @@ class TaskCreateRequest:
     title: str
     description: str = ""
     original_text: str = ""
-    task_type: TaskType = TaskType.TASK
+    task_type: TaskType = TaskType.UNKNOWN
     priority: Priority = Priority.MEDIUM
     deadline: Optional[datetime] = None
     jira_references: Optional[List[str]] = None

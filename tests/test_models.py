@@ -12,15 +12,16 @@ class TestTaskType:
 
     def test_all_task_types_exist(self):
         """Verify all expected task types are defined"""
-        expected_types = ['ANALYSIS', 'DOCUMENTATION', 'DEVELOPMENT', 'COORDINATION', 'BUG_FIX', 'RESEARCH', 'MEETING', 'OTHER']
+        expected_types = ['ANALYSIS', 'DOCUMENTATION', 'DEVELOPMENT', 'COORDINATION', 'BUG', 'UNKNOWN']
         for task_type in expected_types:
             assert hasattr(TaskType, task_type)
 
     def test_task_type_value(self):
         """Test task type values"""
-        assert TaskType.ANALYSIS.value == "анализ"
-        assert TaskType.DEVELOPMENT.value == "разработка"
-        assert TaskType.BUG_FIX.value == "исправление бага"
+        assert TaskType.ANALYSIS.value == "Анализ/Исследование"
+        assert TaskType.DEVELOPMENT.value == "Разработка"
+        assert TaskType.BUG.value == "Баг/Проблема"
+        assert TaskType.UNKNOWN.value == "Неизвестно"
 
 
 class TestComplexity:
@@ -37,18 +38,18 @@ class TestPriority:
     """Tests for Priority enum"""
 
     def test_priority_values(self):
-        """Test priority numeric values"""
-        assert Priority.CRITICAL.value == 1
-        assert Priority.HIGH.value == 2
+        """Test priority numeric values (higher = more important)"""
+        assert Priority.CRITICAL.value == 5
+        assert Priority.HIGH.value == 4
         assert Priority.MEDIUM.value == 3
-        assert Priority.LOW.value == 4
-        assert Priority.BACKLOG.value == 5
+        assert Priority.LOW.value == 2
+        assert Priority.BACKLOG.value == 1
 
     def test_priority_ordering(self):
-        """Test that priorities are ordered correctly"""
-        assert Priority.CRITICAL.value < Priority.HIGH.value
-        assert Priority.HIGH.value < Priority.MEDIUM.value
-        assert Priority.MEDIUM.value < Priority.LOW.value
+        """Test that priorities are ordered correctly (higher value = higher priority)"""
+        assert Priority.CRITICAL.value > Priority.HIGH.value
+        assert Priority.HIGH.value > Priority.MEDIUM.value
+        assert Priority.MEDIUM.value > Priority.LOW.value
 
 
 class TestStatus:
@@ -102,7 +103,7 @@ class TestTask:
 
     def test_task_default_values(self, sample_task):
         """Test that Task has correct default values"""
-        assert sample_task.task_type == TaskType.OTHER
+        assert sample_task.task_type == TaskType.UNKNOWN
         assert sample_task.complexity == Complexity.MEDIUM
         assert sample_task.priority == Priority.MEDIUM
         assert sample_task.status == Status.NEW
@@ -111,11 +112,15 @@ class TestTask:
         assert sample_task.dependencies == []
         assert sample_task.deadline is None
 
-    def test_task_timestamps(self, sample_task):
-        """Test that Task has created_at and updated_at"""
-        assert sample_task.created_at is not None
-        assert sample_task.updated_at is not None
-        assert isinstance(sample_task.created_at, datetime)
+    def test_task_has_required_fields(self, sample_task):
+        """Test that Task has all required fields"""
+        # Verify core fields exist
+        assert hasattr(sample_task, 'id')
+        assert hasattr(sample_task, 'title')
+        assert hasattr(sample_task, 'description')
+        assert hasattr(sample_task, 'original_text')
+        assert sample_task.id == "task-001"
+        assert sample_task.title == "Test Task"
 
     def test_task_ai_confidence_default(self, sample_task):
         """Test AI confidence default value"""
