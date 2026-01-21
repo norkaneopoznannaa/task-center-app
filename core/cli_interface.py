@@ -562,5 +562,94 @@ def recommend(hours):
         console.print(Panel(task_info, border_style="cyan"))
 
 
+@cli.command()
+@click.confirmation_option(prompt='Миграция перенесет все данные из JSON в SQLite. Продолжить?')
+def migrate():
+    """Миграция данных из JSON в SQLite"""
+    from core.sqlite_storage import SQLiteStorage, migrate_json_to_sqlite
+
+    console.print("[bold cyan]Миграция JSON -> SQLite[/bold cyan]\n")
+
+    try:
+        # Проверка наличия JSON файла
+        json_file = Config.get_tasks_file()
+        if not json_file.exists():
+            console.print(f"[yellow]JSON файл не найден: {json_file}[/yellow]")
+            console.print("Создаем пустую SQLite базу...")
+            sqlite_storage = SQLiteStorage()
+            console.print(f"[green]OK: База данных создана: {sqlite_storage.db_path}[/green]")
+            return
+
+        # Выполняем миграцию
+        sqlite_storage = SQLiteStorage()
+        migrate_json_to_sqlite(json_file, sqlite_storage)
+
+        # Проверяем результат
+        tasks = sqlite_storage.load_tasks()
+        stats = sqlite_storage.get_statistics()
+
+        console.print(f"\n[green]OK: Миграция завершена![/green]")
+        console.print(f"\n[yellow]Статистика:[/yellow]")
+        console.print(f"  Задач: {stats['total_tasks']}")
+        console.print(f"  База данных: {sqlite_storage.db_path}")
+        console.print(f"  Бэкап JSON: {json_file.with_suffix('.json.backup')}")
+
+        console.print(Panel(
+            """[bold]Следующие шаги:[/bold]
+
+1. Проверьте что данные корректны:
+   [yellow]python task_manager.py list[/yellow]
+
+2. Для использования SQLite обновите config.py:
+   [cyan]STORAGE_TYPE = 'sqlite'[/cyan]
+
+[dim]Оригинальный JSON сохранен как .backup[/dim]""",
+            title="Готово",
+            border_style="green"
+        ))
+
+    except Exception as e:
+        console.print(f"[red]Ошибка миграции: {e}[/red]")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
+
+
+@cli.command()
+def db_info():
+    """Показать информацию о хранилище данных"""
+    from core.sqlite_storage import SQLiteStorage
+
+    console.print("[bold cyan]Информация о хранилище[/bold cyan]\n")
+
+    # JSON
+    json_file = Config.get_tasks_file()
+    console.print(f"[yellow]JSON:[/yellow] {json_file}")
+    console.print(f"  Существует: {'Да' if json_file.exists() else 'Нет'}")
+
+    if json_file.exists():
+        import json
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            console.print(f"  Задач: {len(data.get('tasks', []))}")
+            console.print(f"  Версия: {data.get('version', 'unknown')}")
+        except Exception as e:
+            console.print(f"  [red]Ошибка чтения: {e}[/red]")
+
+    # SQLite
+    sqlite_path = Config.DATA_DIR / "tasks.db"
+    console.print(f"\n[yellow]SQLite:[/yellow] {sqlite_path}")
+    console.print(f"  Существует: {'Да' if sqlite_path.exists() else 'Нет'}")
+
+    if sqlite_path.exists():
+        try:
+            storage = SQLiteStorage()
+            stats = storage.get_statistics()
+            console.print(f"  Задач: {stats['total_tasks']}")
+            console.print(f"  По статусам: {stats['by_status']}")
+        except Exception as e:
+            console.print(f"  [red]Ошибка: {e}[/red]")
+
+
 if __name__ == '__main__':
     cli()
