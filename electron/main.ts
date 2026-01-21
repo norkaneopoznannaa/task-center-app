@@ -316,6 +316,108 @@ ipcMain.handle('stop-time-tracking', async (_event, taskId: string) => {
   }
 });
 
+// ============================================================================
+// SMART WORKLOG AUTO-CREATION - Phase 1 Quick Win
+// ============================================================================
+
+// Helper functions для worklog
+function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+function formatTime(date: Date): string {
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
+
+// Остановить отслеживание времени с автоматическим созданием worklog
+ipcMain.handle('stop-time-tracking-with-worklog', async (_event, taskId: string, options?: {
+  autoCreateWorklog?: boolean;
+  suggestDescription?: boolean;
+}) => {
+  try {
+    const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+    const data = JSON.parse(content);
+
+    const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === taskId);
+    if (taskIndex === -1) {
+      return { success: false, error: 'Task not found' };
+    }
+
+    const task = data.tasks[taskIndex];
+    if (!task.time_tracking?.current_session_start) {
+      return { success: false, error: 'No active session' };
+    }
+
+    const startTime = new Date(task.time_tracking.current_session_start);
+    const endTime = new Date();
+    const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+
+    // Сохраняем сессию в time_tracking
+    task.time_tracking.sessions.push({
+      start: task.time_tracking.current_session_start,
+      end: endTime.toISOString(),
+      duration_minutes: durationMinutes,
+    });
+
+    task.time_tracking.total_minutes += durationMinutes;
+    delete task.time_tracking.current_session_start;
+
+    // Обновляем actual_hours
+    task.metadata.actual_hours = Math.round((task.time_tracking.total_minutes / 60) * 10) / 10;
+    task.metadata.updated_at = new Date().toISOString();
+    data.updated_at = new Date().toISOString();
+
+    // Сохраняем tasks.json
+    await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+    // Инвалидируем кэш
+    tasksCache.invalidate('all-tasks');
+    console.log('Cache invalidated after stop-time-tracking-with-worklog');
+
+    // ✅ НОВОЕ: Автоматически создаем worklog
+    let worklog = null;
+    if (options?.autoCreateWorklog !== false) {
+      const jiraKey = task.jira_references?.[0]?.ticket_id || null;
+
+      // Базовое описание (AI генерация будет добавлена позже)
+      const durationHours = Math.round(durationMinutes / 60 * 10) / 10;
+      const description = options?.suggestDescription && jiraKey
+        ? `Работа над задачей ${task.title} (${durationHours}ч)`
+        : '';
+
+      const worklogData = {
+        taskId: task.id,
+        jiraKey: jiraKey,
+        date: formatDate(startTime),
+        startTime: formatTime(startTime),
+        endTime: formatTime(endTime),
+        durationMinutes: durationMinutes,
+        description: description,
+        taskTitle: task.title,
+      };
+
+      // Добавляем в worklogs.json
+      const worklogResult = await worklogStorage.addWorklog(worklogData);
+      if (worklogResult.success) {
+        worklog = worklogResult.worklog;
+        console.log('✅ Auto-created worklog:', worklog?.id);
+      } else {
+        console.error('❌ Failed to auto-create worklog:', worklogResult.error);
+      }
+    }
+
+    return {
+      success: true,
+      durationMinutes,
+      totalMinutes: task.time_tracking.total_minutes,
+      worklog: worklog, // ✅ Возвращаем созданный worklog
+    };
+  } catch (error) {
+    console.error('Error in stop-time-tracking-with-worklog:', error);
+    return { success: false, error: String(error) };
+  }
+});
+
 // Получить путь к tasks.json
 ipcMain.handle('get-tasks-path', () => {
   return TASKS_FILE_PATH;

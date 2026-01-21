@@ -11,6 +11,10 @@ contextBridge.exposeInMainWorld('api', {
   // Time tracking
   startTimeTracking: (taskId: string) => ipcRenderer.invoke('start-time-tracking', taskId),
   stopTimeTracking: (taskId: string) => ipcRenderer.invoke('stop-time-tracking', taskId),
+  stopTimeTrackingWithWorklog: (taskId: string, options?: {
+    autoCreateWorklog?: boolean;
+    suggestDescription?: boolean;
+  }) => ipcRenderer.invoke('stop-time-tracking-with-worklog', taskId, options),
 
   // Window controls
   windowMinimize: () => ipcRenderer.invoke('window-minimize'),
@@ -117,6 +121,16 @@ declare global {
         success: boolean;
         durationMinutes?: number;
         totalMinutes?: number;
+        error?: string;
+      }>;
+      stopTimeTrackingWithWorklog: (taskId: string, options?: {
+        autoCreateWorklog?: boolean;
+        suggestDescription?: boolean;
+      }) => Promise<{
+        success: boolean;
+        durationMinutes?: number;
+        totalMinutes?: number;
+        worklog?: LocalWorklog;
         error?: string;
       }>;
       windowMinimize: () => Promise<void>;

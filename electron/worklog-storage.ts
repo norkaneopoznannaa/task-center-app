@@ -34,6 +34,15 @@ const WORKLOGS_FILE_PATH = path.join(
   'worklogs.json'
 );
 
+// Путь к папке с бэкапами
+const BACKUP_FOLDER_PATH = path.join(
+  process.env.USERPROFILE || '',
+  'Task_Center',
+  'data',
+  'backups',
+  'worklogs'
+);
+
 // Инициализация файла если не существует
 function ensureWorklogsFile(): void {
   if (!fs.existsSync(WORKLOGS_FILE_PATH)) {
@@ -42,6 +51,77 @@ function ensureWorklogsFile(): void {
       worklogs: []
     };
     fs.writeFileSync(WORKLOGS_FILE_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
+  }
+}
+
+// ============================================================================
+// BACKUP FUNCTIONALITY - Phase 1 Quick Win
+// ============================================================================
+
+/**
+ * Создает резервную копию worklogs.json перед модификацией
+ */
+function createBackup(): void {
+  try {
+    // Создаем папку для бэкапов если не существует
+    if (!fs.existsSync(BACKUP_FOLDER_PATH)) {
+      fs.mkdirSync(BACKUP_FOLDER_PATH, { recursive: true });
+    }
+
+    // Проверяем существование файла
+    if (!fs.existsSync(WORKLOGS_FILE_PATH)) {
+      return; // Нечего бэкапить
+    }
+
+    // Формируем имя бэкапа с timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `worklogs_${timestamp}.json`;
+    const backupFilePath = path.join(BACKUP_FOLDER_PATH, backupFileName);
+
+    // Копируем файл
+    fs.copyFileSync(WORKLOGS_FILE_PATH, backupFilePath);
+    console.log('✅ Backup created:', backupFileName);
+
+    // Очищаем старые бэкапы (оставляем последние 10)
+    cleanupOldBackups();
+  } catch (error) {
+    console.error('⚠️ Failed to create backup:', error);
+    // Не падаем, просто логируем ошибку
+  }
+}
+
+/**
+ * Удаляет старые бэкапы, оставляя только последние 10
+ */
+function cleanupOldBackups(): void {
+  try {
+    if (!fs.existsSync(BACKUP_FOLDER_PATH)) {
+      return;
+    }
+
+    // Читаем все файлы в папке бэкапов
+    const files = fs.readdirSync(BACKUP_FOLDER_PATH);
+
+    // Фильтруем только worklog бэкапы и сортируем по времени (новые первыми)
+    const backupFiles = files
+      .filter(f => f.startsWith('worklogs_') && f.endsWith('.json'))
+      .map(f => ({
+        name: f,
+        path: path.join(BACKUP_FOLDER_PATH, f),
+        mtime: fs.statSync(path.join(BACKUP_FOLDER_PATH, f)).mtime.getTime()
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    // Удаляем файлы старше 10-го
+    if (backupFiles.length > 10) {
+      const filesToDelete = backupFiles.slice(10);
+      for (const file of filesToDelete) {
+        fs.unlinkSync(file.path);
+        console.log('🗑️ Deleted old backup:', file.name);
+      }
+    }
+  } catch (error) {
+    console.error('⚠️ Failed to cleanup old backups:', error);
   }
 }
 
@@ -104,6 +184,10 @@ export function getPendingWorklogs(): { success: boolean; worklogs?: LocalWorklo
 export function addWorklog(worklogData: Omit<LocalWorklog, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'syncedAt' | 'jiraWorklogId' | 'errorMessage'>): { success: boolean; worklog?: LocalWorklog; error?: string } {
   try {
     ensureWorklogsFile();
+
+    // ✅ Создаем бэкап перед модификацией
+    createBackup();
+
     const content = fs.readFileSync(WORKLOGS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content) as WorklogsData;
 
@@ -133,6 +217,10 @@ export function addWorklog(worklogData: Omit<LocalWorklog, 'id' | 'createdAt' | 
 export function updateWorklog(id: string, updates: Partial<LocalWorklog>): { success: boolean; worklog?: LocalWorklog; error?: string } {
   try {
     ensureWorklogsFile();
+
+    // ✅ Создаем бэкап перед модификацией
+    createBackup();
+
     const content = fs.readFileSync(WORKLOGS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content) as WorklogsData;
 
@@ -159,6 +247,10 @@ export function updateWorklog(id: string, updates: Partial<LocalWorklog>): { suc
 export function deleteWorklog(id: string): { success: boolean; error?: string } {
   try {
     ensureWorklogsFile();
+
+    // ✅ Создаем бэкап перед модификацией
+    createBackup();
+
     const content = fs.readFileSync(WORKLOGS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content) as WorklogsData;
 
