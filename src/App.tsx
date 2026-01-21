@@ -7,6 +7,7 @@ import { WorklogsPage } from './pages/WorklogsPage';
 import { StatusReportPage } from './pages/StatusReportPage';
 import { TaskDetails } from './components/TaskDetails';
 import { ResizeHandle } from './components/ResizeHandle';
+import { FetchJiraIssueModal } from './components/FetchJiraIssueModal';
 import { Task, TasksData, TaskFilters, SortConfig } from './types';
 
 type Theme = 'dark' | 'light';
@@ -35,6 +36,7 @@ function App() {
     return saved ? parseInt(saved, 10) : 560;
   });
   const [activePage, setActivePage] = useState<Page>('tasks');
+  const [showFetchJiraModal, setShowFetchJiraModal] = useState(false);
 
   // Apply theme
   useEffect(() => {
@@ -201,7 +203,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <TitleBar theme={theme} onThemeToggle={toggleTheme} />
+      <TitleBar theme={theme} onThemeToggle={toggleTheme} onFetchJira={() => setShowFetchJiraModal(true)} />
       <div className="app-main">
         <Sidebar
           filters={filters}
@@ -248,6 +250,15 @@ function App() {
           </aside>
         )}
       </div>
+      {showFetchJiraModal && (
+        <FetchJiraIssueModal
+          onClose={() => setShowFetchJiraModal(false)}
+          onSuccess={() => {
+            setShowFetchJiraModal(false);
+            loadTasks();
+          }}
+        />
+      )}
       <Toaster
         position="bottom-right"
         toastOptions={{

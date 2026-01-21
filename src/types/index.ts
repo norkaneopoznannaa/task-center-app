@@ -1,12 +1,19 @@
 // Task Center Types
 
+// Enums synchronized with Python (core/models.py)
+export type Priority = 5 | 4 | 3 | 2 | 1; // CRITICAL | HIGH | MEDIUM | LOW | BACKLOG
+export type Status = 'новая' | 'в работе' | 'завершена' | 'заблокирована' | 'выполнена';
+export type TaskType = 'Анализ/Исследование' | 'Документация' | 'Разработка' | 'Координация' | 'Баг/Проблема' | 'Неизвестно';
+export type Complexity = 'низкая' | 'средняя' | 'высокая';
+export type Category = 'Общие' | 'РЭМД' | 'КУ ФЭР' | 'Авто';
+
 export interface Task {
   id: string;
   title: string;
   description: string;
   original_text?: string;
-  task_type: string;
-  complexity: string;
+  task_type: TaskType;
+  complexity: Complexity;
   priority: Priority;
   status: Status;
   category?: Category;
@@ -27,10 +34,6 @@ export interface Task {
   time_tracking?: TimeTracking;
 }
 
-export type Priority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'BACKLOG';
-export type Status = 'новая' | 'в работе' | 'завершена' | 'заблокирована' | 'выполнена';
-export type Category = 'Общие' | 'РЭМД' | 'КУ ФЭР' | 'Авто';
-
 export const CATEGORY_LABELS: Record<Category, string> = {
   'Общие': 'Общие',
   'РЭМД': 'РЭМД',
@@ -46,11 +49,26 @@ export const CATEGORY_COLORS: Record<Category, string> = {
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  CRITICAL: 'Критично',
-  HIGH: 'Высокий',
-  MEDIUM: 'Средний',
-  LOW: 'Низкий',
-  BACKLOG: 'Бэклог',
+  5: 'Критично',      // CRITICAL
+  4: 'Высокий',       // HIGH
+  3: 'Средний',       // MEDIUM
+  2: 'Низкий',        // LOW
+  1: 'Бэклог',        // BACKLOG
+};
+
+export const TASK_TYPE_LABELS: Record<TaskType, string> = {
+  'Анализ/Исследование': 'Анализ',
+  'Документация': 'Документация',
+  'Разработка': 'Разработка',
+  'Координация': 'Координация',
+  'Баг/Проблема': 'Баг',
+  'Неизвестно': 'Неизвестно',
+};
+
+export const COMPLEXITY_LABELS: Record<Complexity, string> = {
+  'низкая': 'Низкая',
+  'средняя': 'Средняя',
+  'высокая': 'Высокая',
 };
 
 export const STATUS_LABELS: Record<string, string> = {

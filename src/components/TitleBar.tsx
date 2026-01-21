@@ -4,9 +4,10 @@ import './TitleBar.css';
 interface TitleBarProps {
   theme: 'dark' | 'light';
   onThemeToggle: () => void;
+  onFetchJira?: () => void;
 }
 
-export function TitleBar({ theme, onThemeToggle }: TitleBarProps) {
+export function TitleBar({ theme, onThemeToggle, onFetchJira }: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -29,6 +30,15 @@ export function TitleBar({ theme, onThemeToggle }: TitleBarProps) {
         <span className="title-bar-text">Task Center</span>
       </div>
       <div className="title-bar-actions">
+        {onFetchJira && (
+          <button
+            className="theme-toggle"
+            onClick={onFetchJira}
+            title="Загрузить задачу из Jira"
+          >
+            🔗
+          </button>
+        )}
         <button
           className="theme-toggle"
           onClick={onThemeToggle}
