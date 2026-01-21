@@ -2,7 +2,7 @@ import React from 'react';
 import { TaskFilters, Priority, Status, Category, CATEGORY_COLORS } from '../types';
 import './Sidebar.css';
 
-type Page = 'tasks' | 'worklogs';
+type Page = 'tasks' | 'worklogs' | 'report';
 
 interface SidebarProps {
   filters: TaskFilters;
@@ -88,6 +88,13 @@ export function Sidebar({ filters, onFiltersChange, stats, activePage, onPageCha
         >
           <span className="sidebar-nav-icon">W</span>
           <span>Worklogs</span>
+        </button>
+        <button
+          className={`sidebar-nav-item ${activePage === 'report' ? 'active' : ''}`}
+          onClick={() => onPageChange('report')}
+        >
+          <span className="sidebar-nav-icon">R</span>
+          <span>Отчёт</span>
         </button>
       </div>
 

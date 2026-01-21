@@ -4,12 +4,13 @@ import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { TasksPage } from './pages/TasksPage';
 import { WorklogsPage } from './pages/WorklogsPage';
+import { StatusReportPage } from './pages/StatusReportPage';
 import { TaskDetails } from './components/TaskDetails';
 import { ResizeHandle } from './components/ResizeHandle';
 import { Task, TasksData, TaskFilters, SortConfig } from './types';
 
 type Theme = 'dark' | 'light';
-type Page = 'tasks' | 'worklogs';
+type Page = 'tasks' | 'worklogs' | 'report';
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -227,8 +228,10 @@ function App() {
               activeTimers={activeTimers}
               lastUpdated={lastUpdated}
             />
-          ) : (
+          ) : activePage === 'worklogs' ? (
             <WorklogsPage tasks={tasks} />
+          ) : (
+            <StatusReportPage tasks={tasks} />
           )}
         </main>
         {showDetails && (

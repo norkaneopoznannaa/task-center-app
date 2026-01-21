@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as https from 'https';
 import * as http from 'http';
+import { encrypt, decrypt, isEncrypted, saveCredentials, loadCredentials, deleteCredentials } from './credential-store';
 
 // Типы для Jira конфигурации
 interface JiraConfig {
@@ -55,6 +56,17 @@ export function getJiraConfig(): { success: boolean; config?: JiraConfig; error?
     }
     const content = fs.readFileSync(CONFIG_FILE_PATH, 'utf-8');
     const config = JSON.parse(content) as JiraConfig;
+
+    // Load credentials from secure storage
+    const credentials = loadCredentials();
+    if (credentials) {
+      config.username = credentials.username;
+      config.password = credentials.password;
+    } else if (config.username && isEncrypted(config.username)) {
+      // Fallback: decrypt username from config file (legacy migration)
+      config.username = decrypt(config.username);
+    }
+
     // Restore session from memory if available
     if (currentSession) {
       config.sessionCookie = currentSession;
@@ -66,13 +78,16 @@ export function getJiraConfig(): { success: boolean; config?: JiraConfig; error?
   }
 }
 
-// Сохранить конфиг (без пароля - не храним в файле)
+// Сохранить конфиг (credentials хранятся зашифрованными)
 export function saveJiraConfig(config: { baseUrl: string; email: string; apiToken: string }): { success: boolean; error?: string } {
   try {
+    // Save credentials separately with encryption
+    saveCredentials(config.email, config.apiToken);
+
     const fullConfig: JiraConfig = {
       baseUrl: config.baseUrl,
-      username: config.email, // email field used as username
-      password: config.apiToken, // apiToken field used as password
+      username: encrypt(config.email), // Encrypted username
+      password: '', // Password stored in separate encrypted file
       isConfigured: !!(config.baseUrl && config.email && config.apiToken),
       sessionCookie: currentSession
     };
@@ -127,7 +142,7 @@ export async function loginToJira(username: string, password: string): Promise<{
         'Content-Length': Buffer.byteLength(body),
         'Accept': 'application/json'
       },
-      rejectUnauthorized: false
+      rejectUnauthorized: true
     };
 
     const req = httpModule.request(options, (res) => {
@@ -230,7 +245,7 @@ function makeJiraRequest(
       path: url.pathname + url.search,
       method: method,
       headers: headers,
-      rejectUnauthorized: false
+      rejectUnauthorized: true
     };
 
     const req = httpModule.request(options, (res) => {
@@ -348,7 +363,7 @@ export async function logoutFromJira(): Promise<{ success: boolean; error?: stri
       headers: {
         'Cookie': currentSession || ''
       },
-      rejectUnauthorized: false
+      rejectUnauthorized: true
     };
 
     const req = httpModule.request(options, () => {

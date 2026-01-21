@@ -72,6 +72,20 @@ export function getWorklogsByDate(date: string): { success: boolean; worklogs?: 
   }
 }
 
+// Получить worklogs за диапазон дат (для отчётов)
+export function getWorklogsByRange(startDate: string, endDate: string): { success: boolean; worklogs?: LocalWorklog[]; error?: string } {
+  try {
+    const result = getWorklogs();
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error };
+    }
+    const worklogs = result.data.worklogs.filter(w => w.date >= startDate && w.date <= endDate);
+    return { success: true, worklogs };
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
 // Получить pending worklogs (не синхронизированные)
 export function getPendingWorklogs(): { success: boolean; worklogs?: LocalWorklog[]; error?: string } {
   try {

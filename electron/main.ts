@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as chokidar from 'chokidar';
 import * as worklogStorage from './worklog-storage';
 import * as jiraConfig from './jira-config';
@@ -16,6 +17,54 @@ const TASKS_FILE_PATH = path.join(
   'data',
   'tasks.json'
 );
+
+// ============================================================================
+// IN-MEMORY CACHE - Ускорение для AI workflow
+// ============================================================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+class TasksCache {
+  private cache: Map<string, CacheEntry<unknown>> = new Map();
+  private ttl: number;
+
+  constructor(ttl: number = 5000) { // 5 секунд TTL по умолчанию
+    this.ttl = ttl;
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+
+    const age = Date.now() - entry.timestamp;
+    if (age > this.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.data as T;
+  }
+
+  set<T>(key: string, data: T): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  invalidate(key: string): void {
+    this.cache.delete(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+const tasksCache = new TasksCache(5000); // TTL 5 секунд
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -105,14 +154,31 @@ function stopFileWatcher() {
 // IPC HANDLERS
 // ============================================================================
 
-// Получить все задачи
+// Получить все задачи (с кэшированием)
 ipcMain.handle('get-tasks', async () => {
   try {
-    if (!fs.existsSync(TASKS_FILE_PATH)) {
+    // Проверяем кэш
+    const cached = tasksCache.get<{ version: string; tasks: unknown[] }>('all-tasks');
+    if (cached) {
+      console.log('Cache hit: get-tasks');
+      return { success: true, data: cached };
+    }
+
+    // Async проверка существования файла
+    try {
+      await fsPromises.access(TASKS_FILE_PATH);
+    } catch {
       return { success: false, error: 'tasks.json not found' };
     }
-    const content = fs.readFileSync(TASKS_FILE_PATH, 'utf-8');
+
+    // Async чтение файла
+    const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content);
+
+    // Сохраняем в кэш
+    tasksCache.set('all-tasks', data);
+    console.log('Cache miss: get-tasks, loaded from file');
+
     return { success: true, data };
   } catch (error) {
     console.error('Error reading tasks:', error);
@@ -120,14 +186,18 @@ ipcMain.handle('get-tasks', async () => {
   }
 });
 
-// Обновить задачу
+// Обновить задачу (async + cache invalidation)
 ipcMain.handle('update-task', async (_event, taskId: string, updates: Record<string, unknown>) => {
   try {
-    if (!fs.existsSync(TASKS_FILE_PATH)) {
+    // Async проверка существования файла
+    try {
+      await fsPromises.access(TASKS_FILE_PATH);
+    } catch {
       return { success: false, error: 'tasks.json not found' };
     }
 
-    const content = fs.readFileSync(TASKS_FILE_PATH, 'utf-8');
+    // Async чтение
+    const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content);
 
     const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === taskId);
@@ -148,7 +218,13 @@ ipcMain.handle('update-task', async (_event, taskId: string, updates: Record<str
     // Обновляем время изменения файла
     data.updated_at = new Date().toISOString();
 
-    fs.writeFileSync(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    // Async запись
+    await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+    // Инвалидируем кэш
+    tasksCache.invalidate('all-tasks');
+    console.log('Cache invalidated after update-task');
+
     return { success: true };
   } catch (error) {
     console.error('Error updating task:', error);
@@ -156,10 +232,10 @@ ipcMain.handle('update-task', async (_event, taskId: string, updates: Record<str
   }
 });
 
-// Начать отслеживание времени
+// Начать отслеживание времени (async + cache invalidation)
 ipcMain.handle('start-time-tracking', async (_event, taskId: string) => {
   try {
-    const content = fs.readFileSync(TASKS_FILE_PATH, 'utf-8');
+    const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content);
 
     const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === taskId);
@@ -180,17 +256,19 @@ ipcMain.handle('start-time-tracking', async (_event, taskId: string) => {
     data.tasks[taskIndex].metadata.last_status_change = new Date().toISOString();
     data.updated_at = new Date().toISOString();
 
-    fs.writeFileSync(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    tasksCache.invalidate('all-tasks');
+
     return { success: true, startTime: data.tasks[taskIndex].time_tracking.current_session_start };
   } catch (error) {
     return { success: false, error: String(error) };
   }
 });
 
-// Остановить отслеживание времени
+// Остановить отслеживание времени (async + cache invalidation)
 ipcMain.handle('stop-time-tracking', async (_event, taskId: string) => {
   try {
-    const content = fs.readFileSync(TASKS_FILE_PATH, 'utf-8');
+    const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
     const data = JSON.parse(content);
 
     const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === taskId);
@@ -222,7 +300,12 @@ ipcMain.handle('stop-time-tracking', async (_event, taskId: string) => {
     task.metadata.updated_at = new Date().toISOString();
     data.updated_at = new Date().toISOString();
 
-    fs.writeFileSync(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+    // Инвалидируем кэш
+    tasksCache.invalidate('all-tasks');
+    console.log('Cache invalidated after stop-time-tracking');
+
     return {
       success: true,
       durationMinutes,
@@ -271,6 +354,11 @@ ipcMain.handle('get-worklogs', async () => {
 // Получить worklogs за дату
 ipcMain.handle('get-worklogs-by-date', async (_event, date: string) => {
   return worklogStorage.getWorklogsByDate(date);
+});
+
+// Получить worklogs за диапазон дат
+ipcMain.handle('get-worklogs-by-range', async (_event, startDate: string, endDate: string) => {
+  return worklogStorage.getWorklogsByRange(startDate, endDate);
 });
 
 // Получить pending worklogs

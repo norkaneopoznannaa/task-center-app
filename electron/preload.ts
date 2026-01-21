@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api', {
   // Worklog operations
   getWorklogs: () => ipcRenderer.invoke('get-worklogs'),
   getWorklogsByDate: (date: string) => ipcRenderer.invoke('get-worklogs-by-date', date),
+  getWorklogsByRange: (startDate: string, endDate: string) => ipcRenderer.invoke('get-worklogs-by-range', startDate, endDate),
   getPendingWorklogs: () => ipcRenderer.invoke('get-pending-worklogs'),
   addWorklog: (worklogData: WorklogInput) => ipcRenderer.invoke('add-worklog', worklogData),
   updateWorklog: (id: string, updates: Record<string, unknown>) =>
@@ -127,6 +128,7 @@ declare global {
       // Worklog operations
       getWorklogs: () => Promise<{ success: boolean; data?: WorklogsData; error?: string }>;
       getWorklogsByDate: (date: string) => Promise<{ success: boolean; worklogs?: LocalWorklog[]; error?: string }>;
+      getWorklogsByRange: (startDate: string, endDate: string) => Promise<{ success: boolean; worklogs?: LocalWorklog[]; error?: string }>;
       getPendingWorklogs: () => Promise<{ success: boolean; worklogs?: LocalWorklog[]; error?: string }>;
       addWorklog: (worklogData: WorklogInput) => Promise<{ success: boolean; worklog?: LocalWorklog; error?: string }>;
       updateWorklog: (id: string, updates: Record<string, unknown>) => Promise<{ success: boolean; worklog?: LocalWorklog; error?: string }>;
