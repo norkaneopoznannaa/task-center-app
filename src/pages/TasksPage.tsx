@@ -15,6 +15,10 @@ interface TasksPageProps {
   onTaskSelect: (task: Task) => void;
   activeTimers: Record<string, { startTime: Date; elapsed: number }>;
   lastUpdated: string | null;
+  onCreateTask?: () => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (task: Task) => void;
+  onDuplicateTask?: (taskId: string) => void;
 }
 
 const PRIORITY_ORDER: Record<Priority, number> = {
@@ -43,6 +47,10 @@ export function TasksPage({
   onTaskSelect,
   activeTimers,
   lastUpdated,
+  onCreateTask,
+  onEditTask,
+  onDeleteTask,
+  onDuplicateTask,
 }: TasksPageProps) {
   // Filter tasks
   const filteredTasks = useMemo(() => {
@@ -159,6 +167,15 @@ export function TasksPage({
         </div>
       </div>
 
+      {/* Toolbar */}
+      {onCreateTask && (
+        <div className="tasks-toolbar">
+          <button className="btn btn-primary" onClick={onCreateTask}>
+            + Создать задачу
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="tasks-table-container">
         <table className="tasks-table">
@@ -200,6 +217,9 @@ export function TasksPage({
                   onStartTracking={onStartTracking}
                   onStopTracking={onStopTracking}
                   onClick={() => onTaskSelect(task)}
+                  onEditTask={onEditTask}
+                  onDeleteTask={onDeleteTask}
+                  onDuplicateTask={onDuplicateTask}
                 />
               ))
             )}

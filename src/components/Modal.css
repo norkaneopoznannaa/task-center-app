@@ -233,3 +233,43 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
 }
+
+/* Modal size variants */
+.modal-small {
+  max-width: 400px;
+}
+
+.modal-medium {
+  max-width: 550px;
+}
+
+.modal-large {
+  max-width: 700px;
+}
+
+/* Button variants */
+.btn-danger {
+  background: var(--priority-critical);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Required field indicator */
+.required {
+  color: var(--priority-critical);
+  margin-left: 2px;
+}

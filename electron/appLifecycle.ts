@@ -1,5 +1,6 @@
 import { app, ipcMain } from 'electron';
 import * as fsPromises from 'fs/promises';
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import * as worklogStorage from './worklog-storage';
 import * as jiraConfig from './jira-config';
@@ -7,6 +8,10 @@ import {
   UpdateTaskParamsSchema,
   StartTimerParamsSchema,
   StopTimerParamsSchema,
+  CreateTaskParamsSchema,
+  DeleteTaskParamsSchema,
+  DuplicateTaskParamsSchema,
+  BulkUpdateTasksParamsSchema,
   JiraConfigSchema,
 } from './validators';
 import { TASKS_FILE_PATH, CACHE_TTL } from './constants';
@@ -245,6 +250,223 @@ export function registerIpcHandlers() {
   // Получить путь к tasks.json
   ipcMain.handle('get-tasks-path', () => {
     return TASKS_FILE_PATH;
+  });
+
+  // ============================================================================
+  // TASK CRUD OPERATIONS
+  // ============================================================================
+
+  // Создать новую задачу
+  ipcMain.handle('create-task', async (_event, taskData: Record<string, unknown>) => {
+    try {
+      // Валидация данных
+      const validation = validateInput(CreateTaskParamsSchema, taskData);
+      if (!validation.valid) {
+        return { success: false, error: `Validation error: ${validation.error}` };
+      }
+
+      const validTaskData = validation.data;
+
+      // Читаем существующие задачи
+      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content);
+
+      const now = new Date().toISOString();
+
+      // Создаём новую задачу с автогенерируемыми полями
+      const newTask = {
+        ...validTaskData,
+        id: randomUUID(),
+        time_tracking: {
+          sessions: [],
+          total_minutes: 0,
+        },
+        metadata: {
+          created_at: now,
+          updated_at: now,
+          last_status_change: now,
+          estimated_hours: null,
+          actual_hours: null,
+          tags: [],
+        },
+      };
+
+      // Добавляем задачу в массив
+      data.tasks.push(newTask);
+      data.updated_at = now;
+
+      // Сохраняем
+      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+      // Инвалидируем кэш
+      tasksCache.invalidate('all-tasks');
+      console.log('Cache invalidated after create-task');
+
+      return {
+        success: true,
+        task: newTask,
+      };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Удалить задачу
+  ipcMain.handle('delete-task', async (_event, taskId: string) => {
+    try {
+      // Валидация
+      const validation = validateInput(DeleteTaskParamsSchema, { taskId });
+      if (!validation.valid) {
+        return { success: false, error: `Validation error: ${validation.error}` };
+      }
+
+      const validTaskId = validation.data.taskId;
+
+      // Читаем задачи
+      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content);
+
+      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+      if (taskIndex === -1) {
+        return { success: false, error: 'Task not found' };
+      }
+
+      // Удаляем задачу
+      data.tasks.splice(taskIndex, 1);
+      data.updated_at = new Date().toISOString();
+
+      // Сохраняем
+      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+      // Инвалидируем кэш
+      tasksCache.invalidate('all-tasks');
+      console.log('Cache invalidated after delete-task');
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Дублировать задачу
+  ipcMain.handle('duplicate-task', async (_event, taskId: string) => {
+    try {
+      // Валидация
+      const validation = validateInput(DuplicateTaskParamsSchema, { taskId });
+      if (!validation.valid) {
+        return { success: false, error: `Validation error: ${validation.error}` };
+      }
+
+      const validTaskId = validation.data.taskId;
+
+      // Читаем задачи
+      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content);
+
+      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+      if (taskIndex === -1) {
+        return { success: false, error: 'Task not found' };
+      }
+
+      const originalTask = data.tasks[taskIndex];
+      const now = new Date().toISOString();
+
+      // Создаём копию с новым ID и обновлённым временем
+      const duplicatedTask = {
+        ...originalTask,
+        id: randomUUID(),
+        title: `${originalTask.title} (копия)`,
+        status: 'новая',
+        time_tracking: {
+          sessions: [],
+          total_minutes: 0,
+        },
+        metadata: {
+          ...originalTask.metadata,
+          created_at: now,
+          updated_at: now,
+          last_status_change: now,
+          actual_hours: null,
+        },
+      };
+
+      // Добавляем после оригинала
+      data.tasks.splice(taskIndex + 1, 0, duplicatedTask);
+      data.updated_at = now;
+
+      // Сохраняем
+      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+      // Инвалидируем кэш
+      tasksCache.invalidate('all-tasks');
+      console.log('Cache invalidated after duplicate-task');
+
+      return {
+        success: true,
+        task: duplicatedTask,
+      };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Массовое обновление задач
+  ipcMain.handle('bulk-update-tasks', async (_event, taskIds: string[], updates: Record<string, unknown>) => {
+    try {
+      // Валидация
+      const validation = validateInput(BulkUpdateTasksParamsSchema, { taskIds, updates });
+      if (!validation.valid) {
+        return { success: false, error: `Validation error: ${validation.error}` };
+      }
+
+      const { taskIds: validTaskIds, updates: validUpdates } = validation.data;
+
+      // Читаем задачи
+      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content);
+
+      const now = new Date().toISOString();
+      let updatedCount = 0;
+
+      // Обновляем каждую задачу
+      for (const task of data.tasks) {
+        if (validTaskIds.includes(task.id)) {
+          // Применяем обновления
+          Object.assign(task, validUpdates);
+
+          // Обновляем метаданные
+          task.metadata = task.metadata || {};
+          task.metadata.updated_at = now;
+
+          // Обновляем last_status_change если менялся статус
+          if (validUpdates.status && validUpdates.status !== task.status) {
+            task.metadata.last_status_change = now;
+          }
+
+          updatedCount++;
+        }
+      }
+
+      if (updatedCount === 0) {
+        return { success: false, error: 'No tasks found with provided IDs' };
+      }
+
+      data.updated_at = now;
+
+      // Сохраняем
+      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+      // Инвалидируем кэш
+      tasksCache.invalidate('all-tasks');
+      console.log('Cache invalidated after bulk-update-tasks');
+
+      return {
+        success: true,
+        updatedCount,
+      };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
   });
 
   // ============================================================================

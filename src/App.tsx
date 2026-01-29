@@ -8,6 +8,10 @@ import { StatusReportPage } from './pages/StatusReportPage';
 import { TaskDetails } from './components/TaskDetails';
 import { ResizeHandle } from './components/ResizeHandle';
 import { FetchJiraIssueModal } from './components/FetchJiraIssueModal';
+import { CreateTaskModal } from './components/CreateTaskModal';
+import { EditTaskModal } from './components/EditTaskModal';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal';
+import { BulkEditModal } from './components/BulkEditModal';
 import { Task, TasksData, TaskFilters, SortConfig } from './types';
 
 type Theme = 'dark' | 'light';
@@ -37,6 +41,15 @@ function App() {
   });
   const [activePage, setActivePage] = useState<Page>('tasks');
   const [showFetchJiraModal, setShowFetchJiraModal] = useState(false);
+
+  // CRUD modals state
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [showDeleteTaskModal, setShowDeleteTaskModal] = useState(false);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [selectedTasksForBulk, setSelectedTasksForBulk] = useState<Task[]>([]);
 
   // Apply theme
   useEffect(() => {
@@ -168,6 +181,41 @@ function App() {
     setShowDetails(false);
   }, []);
 
+  // CRUD handlers
+  const handleCreateTask = useCallback(() => {
+    setShowCreateTaskModal(true);
+  }, []);
+
+  const handleEditTask = useCallback((task: Task) => {
+    setTaskToEdit(task);
+    setShowEditTaskModal(true);
+  }, []);
+
+  const handleDeleteTask = useCallback((task: Task) => {
+    setTaskToDelete(task);
+    setShowDeleteTaskModal(true);
+  }, []);
+
+  const handleDuplicateTask = useCallback(async (taskId: string) => {
+    try {
+      const result = await window.api.duplicateTask(taskId);
+      if (result.success) {
+        toast.success('Задача дублирована');
+        loadTasks();
+      } else {
+        toast.error(result.error || 'Ошибка дублирования задачи');
+      }
+    } catch (error) {
+      toast.error('Ошибка дублирования задачи');
+      console.error('Duplicate task error:', error);
+    }
+  }, [loadTasks]);
+
+  const handleBulkEdit = useCallback((tasks: Task[]) => {
+    setSelectedTasksForBulk(tasks);
+    setShowBulkEditModal(true);
+  }, []);
+
   // Update active timers from loaded tasks
   useEffect(() => {
     const newTimers: Record<string, { startTime: Date; elapsed: number }> = {};
@@ -229,6 +277,10 @@ function App() {
               onTaskSelect={handleTaskSelect}
               activeTimers={activeTimers}
               lastUpdated={lastUpdated}
+              onCreateTask={handleCreateTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onDuplicateTask={handleDuplicateTask}
             />
           ) : activePage === 'worklogs' ? (
             <WorklogsPage tasks={tasks} />
@@ -255,6 +307,57 @@ function App() {
           onClose={() => setShowFetchJiraModal(false)}
           onSuccess={() => {
             setShowFetchJiraModal(false);
+            loadTasks();
+          }}
+        />
+      )}
+      {showCreateTaskModal && (
+        <CreateTaskModal
+          onClose={() => setShowCreateTaskModal(false)}
+          onTaskCreated={() => {
+            setShowCreateTaskModal(false);
+            loadTasks();
+          }}
+        />
+      )}
+      {showEditTaskModal && taskToEdit && (
+        <EditTaskModal
+          task={taskToEdit}
+          onClose={() => {
+            setShowEditTaskModal(false);
+            setTaskToEdit(null);
+          }}
+          onTaskUpdated={() => {
+            setShowEditTaskModal(false);
+            setTaskToEdit(null);
+            loadTasks();
+          }}
+        />
+      )}
+      {showDeleteTaskModal && taskToDelete && (
+        <ConfirmDeleteModal
+          task={taskToDelete}
+          onClose={() => {
+            setShowDeleteTaskModal(false);
+            setTaskToDelete(null);
+          }}
+          onTaskDeleted={() => {
+            setShowDeleteTaskModal(false);
+            setTaskToDelete(null);
+            loadTasks();
+          }}
+        />
+      )}
+      {showBulkEditModal && selectedTasksForBulk.length > 0 && (
+        <BulkEditModal
+          tasks={selectedTasksForBulk}
+          onClose={() => {
+            setShowBulkEditModal(false);
+            setSelectedTasksForBulk([]);
+          }}
+          onTasksUpdated={() => {
+            setShowBulkEditModal(false);
+            setSelectedTasksForBulk([]);
             loadTasks();
           }}
         />
