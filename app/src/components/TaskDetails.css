@@ -196,11 +196,15 @@
 
 /* Timer Controls */
 .timer-controls {
+  display: flex;
+  gap: var(--spacing-sm);
   margin-top: var(--spacing-sm);
 }
 
 .timer-btn {
-  width: 100%;
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 13px;
 }
 
 .timer-btn.active {
@@ -376,16 +380,17 @@
    ============================================================================ */
 
 .jira-export-section {
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--border);
+  margin-top: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .jira-export-info {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-sm);
   font-size: 12px;
 }
 
@@ -400,13 +405,12 @@
 }
 
 .btn-jira {
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   background: linear-gradient(135deg, #2684ff 0%, #0052cc 100%);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: white;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);

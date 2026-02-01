@@ -34,14 +34,14 @@ export const TaskDetails: React.FC<TaskDetailsProps> = ({
       <TaskHeader task={task} onClose={onClose} />
 
       <div className="task-details-content">
-        <TaskContent task={task} />
-
         <TaskTimeTracking
           task={task}
           onStartTimer={onStartTimer}
           onStopTimer={onStopTimer}
           activeTimers={activeTimers}
         />
+
+        <TaskContent task={task} />
 
         <TaskMetadata task={task} onStatusChange={onStatusChange} />
       </div>
