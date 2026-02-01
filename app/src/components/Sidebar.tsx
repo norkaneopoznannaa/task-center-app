@@ -78,23 +78,33 @@ export function Sidebar({ filters, onFiltersChange, stats, activePage, onPageCha
         <button
           className={`sidebar-nav-item ${activePage === 'tasks' ? 'active' : ''}`}
           onClick={() => onPageChange('tasks')}
+          title="Задачи"
         >
-          <span className="sidebar-nav-icon">T</span>
-          <span>Задачи</span>
+          <svg className="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+          </svg>
         </button>
         <button
           className={`sidebar-nav-item ${activePage === 'worklogs' ? 'active' : ''}`}
           onClick={() => onPageChange('worklogs')}
+          title="Worklogs"
         >
-          <span className="sidebar-nav-icon">W</span>
-          <span>Worklogs</span>
+          <svg className="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
         </button>
         <button
           className={`sidebar-nav-item ${activePage === 'report' ? 'active' : ''}`}
           onClick={() => onPageChange('report')}
+          title="Отчёт"
         >
-          <span className="sidebar-nav-icon">R</span>
-          <span>Отчёт</span>
+          <svg className="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 20V10" />
+            <path d="M12 20V4" />
+            <path d="M6 20v-6" />
+          </svg>
         </button>
       </div>
 

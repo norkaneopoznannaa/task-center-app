@@ -63,7 +63,9 @@
 }
 
 .sidebar-nav-icon {
-  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .sidebar-section-title {
