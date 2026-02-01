@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Task } from '../../types';
+import { PlayIcon, StopIcon, UploadIcon, CheckIcon, AlertIcon, ClockIcon, InfoIcon, ChevronDownIcon, ChevronUpIcon } from '../icons';
 
 interface TaskTimeTrackingProps {
   task: Task;
@@ -7,6 +8,37 @@ interface TaskTimeTrackingProps {
   onStopTimer: (taskId: string) => void;
   activeTimers: Record<string, { startTime: Date; elapsed: number }>;
 }
+
+// Live Timer Counter Component
+const LiveTimer: React.FC<{ startTime: Date }> = ({ startTime }) => {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const calculateElapsed = () => {
+      return Math.floor((Date.now() - startTime.getTime()) / 1000);
+    };
+
+    setElapsed(calculateElapsed());
+
+    const interval = setInterval(() => {
+      setElapsed(calculateElapsed());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  const hours = Math.floor(elapsed / 3600);
+  const minutes = Math.floor((elapsed % 3600) / 60);
+  const seconds = elapsed % 60;
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  return (
+    <span className="live-timer">
+      {pad(hours)}:{pad(minutes)}:{pad(seconds)}
+    </span>
+  );
+};
 
 const roundTo30Minutes = (minutes: number): number => {
   if (minutes <= 0) return 0;
@@ -35,6 +67,21 @@ const formatDuration = (minutes: number) => {
   return `${mins}м`;
 };
 
+const formatDateShort = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+  });
+};
+
+const formatTimeRange = (start: string, end: string) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const timeOpts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+  return `${startDate.toLocaleTimeString('ru-RU', timeOpts)} — ${endDate.toLocaleTimeString('ru-RU', timeOpts)}`;
+};
+
 export const TaskTimeTracking: React.FC<TaskTimeTrackingProps> = ({
   task,
   onStartTimer,
@@ -48,28 +95,32 @@ export const TaskTimeTracking: React.FC<TaskTimeTrackingProps> = ({
     exportedMinutes: number | null;
   }>({ loading: false, success: false, error: null, exportedMinutes: null });
 
-  const isTimerActive = !!activeTimers[task.id];
-  const totalMinutes = task.time_tracking?.total_minutes || 0;
-  const actualHours = task.metadata?.actual_hours || 0;
-  const estimatedHours = task.metadata?.estimated_hours;
+  const [showAllSessions, setShowAllSessions] = useState(false);
 
-  const handleExportToJira = async () => {
-    if (!task || !task.jira_references || task.jira_references.length === 0) {
+  const isTimerActive = !!activeTimers[task.id];
+  const activeTimer = activeTimers[task.id];
+  const totalMinutes = task.time_tracking?.total_minutes || 0;
+  const estimatedHours = task.metadata?.estimated_hours;
+  const sessions = task.time_tracking?.sessions || [];
+  const hasJiraRef = task.jira_references && task.jira_references.length > 0;
+  const jiraKey = hasJiraRef ? task.jira_references[0].ticket_id : null;
+
+  const roundedMinutes = roundTo30Minutes(totalMinutes);
+
+  const handleExportToJira = useCallback(async () => {
+    if (!jiraKey) {
       setJiraExportState({ loading: false, success: false, error: 'Нет связанной Jira задачи', exportedMinutes: null });
       return;
     }
 
-    const totalMinutes = task.time_tracking?.total_minutes || 0;
     if (totalMinutes <= 0) {
       setJiraExportState({ loading: false, success: false, error: 'Нет отработанного времени', exportedMinutes: null });
       return;
     }
 
-    const roundedMinutes = roundTo30Minutes(totalMinutes);
     const timeSpentSeconds = roundedMinutes * 60;
-    const jiraKey = task.jira_references[0].ticket_id;
     const started = formatJiraDateTime(new Date());
-    const comment = `${task.title}\n\nВремя: ${totalMinutes} мин -> ${roundedMinutes} мин (округлено до 30 мин)`;
+    const comment = `${task.title}\n\nВремя: ${totalMinutes} мин → ${roundedMinutes} мин (округлено до 30 мин)`;
 
     setJiraExportState({ loading: true, success: false, error: null, exportedMinutes: null });
 
@@ -84,125 +135,184 @@ export const TaskTimeTracking: React.FC<TaskTimeTrackingProps> = ({
     } catch (err) {
       setJiraExportState({ loading: false, success: false, error: String(err), exportedMinutes: null });
     }
-  };
+  }, [jiraKey, totalMinutes, roundedMinutes, task.title]);
+
+  // Group sessions by date
+  const groupedSessions = sessions.reduce((acc, session) => {
+    const date = formatDateShort(session.start);
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(session);
+    return acc;
+  }, {} as Record<string, typeof sessions>);
+
+  const sortedDates = Object.keys(groupedSessions).reverse();
+  const displayDates = showAllSessions ? sortedDates : sortedDates.slice(0, 2);
 
   return (
-    <div className="detail-section">
-      <label>Учёт времени</label>
-      <div className="time-tracking-details">
-        <div className="time-row">
-          <span>Затрачено:</span>
-          <span className="time-value">
-            {totalMinutes > 0 ? formatDuration(totalMinutes) : '—'}
-            {actualHours > 0 && ` (${actualHours}ч)`}
-          </span>
+    <div className="detail-section time-tracking-section">
+      <label>
+        <ClockIcon size={14} className="section-icon" />
+        Учёт времени
+      </label>
+
+      {/* Timer Display */}
+      <div className="time-tracking-card">
+        <div className="time-display">
+          {isTimerActive && activeTimer ? (
+            <div className="timer-active">
+              <span className="timer-label">Текущая сессия:</span>
+              <LiveTimer startTime={activeTimer.startTime} />
+              <span className="timer-pulse" />
+            </div>
+          ) : (
+            <div className="timer-inactive">
+              <span className="timer-label">Всего затрачено:</span>
+              <span className="total-time">{totalMinutes > 0 ? formatDuration(totalMinutes) : '—'}</span>
+            </div>
+          )}
         </div>
-        {estimatedHours && (
-          <div className="time-row">
-            <span>Оценка:</span>
-            <span className="time-value">{estimatedHours}ч</span>
-          </div>
-        )}
-        {estimatedHours && actualHours > 0 && (
-          <div className="time-row">
-            <span>Прогресс:</span>
+
+        {/* Progress bar if estimated */}
+        {estimatedHours && totalMinutes > 0 && (
+          <div className="time-progress">
             <div className="progress-bar">
               <div
                 className="progress-fill"
                 style={{
-                  width: `${Math.min((actualHours / estimatedHours) * 100, 100)}%`,
+                  width: `${Math.min((totalMinutes / 60 / estimatedHours) * 100, 100)}%`,
                 }}
               />
             </div>
-            <span className="progress-percent">
-              {Math.round((actualHours / estimatedHours) * 100)}%
+            <span className="progress-text">
+              {formatDuration(totalMinutes)} / {estimatedHours}ч
+              ({Math.round((totalMinutes / 60 / estimatedHours) * 100)}%)
             </span>
           </div>
         )}
-        <div className="timer-controls">
-          {isTimerActive ? (
-            <button
-              className="btn btn-secondary timer-btn active"
-              onClick={() => onStopTimer(task.id)}
-            >
-              ⏹ Остановить таймер
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary timer-btn"
-              onClick={() => onStartTimer(task.id)}
-            >
-              ▶ Начать отсчёт
-            </button>
-          )}
-        </div>
 
-        {/* Экспорт в Jira */}
-        {task.jira_references && task.jira_references.length > 0 && (
-          <div className="jira-export-section">
-            <div className="jira-export-info">
-              <span className="jira-target">
-                Jira: {task.jira_references[0].ticket_id}
-              </span>
-              {totalMinutes > 0 && (
-                <span className="jira-time-preview">
-                  {formatDuration(totalMinutes)} → {formatDuration(roundTo30Minutes(totalMinutes))}
-                </span>
-              )}
-            </div>
-            <button
-              className={`btn btn-jira ${jiraExportState.loading ? 'loading' : ''} ${jiraExportState.success ? 'success' : ''}`}
-              onClick={handleExportToJira}
-              disabled={jiraExportState.loading || totalMinutes <= 0 || isTimerActive}
-              title={isTimerActive ? 'Остановите таймер перед экспортом' : totalMinutes <= 0 ? 'Нет времени для экспорта' : `Экспортировать ${formatDuration(roundTo30Minutes(totalMinutes))} в Jira`}
-            >
-              {jiraExportState.loading ? (
-                '⏳ Выгрузка...'
-              ) : jiraExportState.success ? (
-                `✓ Выгружено ${formatDuration(jiraExportState.exportedMinutes || 0)}`
-              ) : (
-                '📤 Выгрузить в Jira'
-              )}
-            </button>
-            {jiraExportState.error && (
-              <div className="jira-export-error">
-                ⚠️ {jiraExportState.error}
+        {/* Timer Controls */}
+        <div className="timer-controls">
+          <button
+            className={`btn-timer btn-play ${isTimerActive ? 'disabled' : ''}`}
+            onClick={() => onStartTimer(task.id)}
+            disabled={isTimerActive}
+            title="Начать отсчёт"
+            aria-label="Начать таймер"
+          >
+            <PlayIcon size={18} />
+          </button>
+          <button
+            className={`btn-timer btn-stop ${!isTimerActive ? 'disabled' : ''}`}
+            onClick={() => onStopTimer(task.id)}
+            disabled={!isTimerActive}
+            title="Остановить"
+            aria-label="Остановить таймер"
+          >
+            <StopIcon size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Jira Export Section */}
+      {hasJiraRef && (
+        <div className="jira-export-card">
+          <div className="jira-export-header">
+            <span className="jira-target">{jiraKey}</span>
+            {totalMinutes > 0 && (
+              <div className="export-preview">
+                <span className="time-original">{formatDuration(totalMinutes)}</span>
+                <span className="time-arrow">→</span>
+                <span className="time-rounded">{formatDuration(roundedMinutes)}</span>
               </div>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Sessions */}
-      {task.time_tracking?.sessions && task.time_tracking.sessions.length > 0 && (
-        <div className="detail-section">
-          <label>Сессии работы</label>
+          {totalMinutes > 0 && totalMinutes !== roundedMinutes && (
+            <div className="export-info">
+              <InfoIcon size={12} />
+              <span>Время округляется до 30 минут</span>
+            </div>
+          )}
+
+          <button
+            className={`btn btn-jira-export ${jiraExportState.loading ? 'loading' : ''} ${jiraExportState.success ? 'success' : ''}`}
+            onClick={handleExportToJira}
+            disabled={jiraExportState.loading || totalMinutes <= 0 || isTimerActive}
+            title={
+              isTimerActive ? 'Остановите таймер перед экспортом' :
+              totalMinutes <= 0 ? 'Нет времени для экспорта' :
+              `Экспортировать ${formatDuration(roundedMinutes)} в Jira`
+            }
+          >
+            {jiraExportState.loading ? (
+              <>
+                <span className="btn-spinner" />
+                <span>Выгрузка...</span>
+              </>
+            ) : jiraExportState.success ? (
+              <>
+                <CheckIcon size={16} />
+                <span>Выгружено {formatDuration(jiraExportState.exportedMinutes || 0)}</span>
+              </>
+            ) : (
+              <>
+                <UploadIcon size={16} />
+                <span>Выгрузить в Jira</span>
+              </>
+            )}
+          </button>
+
+          {jiraExportState.error && (
+            <div className="export-error">
+              <AlertIcon size={14} />
+              <span>{jiraExportState.error}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sessions List */}
+      {sessions.length > 0 && (
+        <div className="sessions-section">
+          <div className="sessions-header">
+            <label>История сессий</label>
+            <span className="sessions-count">{sessions.length}</span>
+          </div>
+
           <div className="sessions-list">
-            {task.time_tracking.sessions.slice(-5).reverse().map((session, i) => (
-              <div key={i} className="session-item">
-                <span className="session-date">
-                  {new Date(session.start).toLocaleDateString('ru-RU', {
-                    day: 'numeric',
-                    month: 'short',
-                  })}
-                </span>
-                <span className="session-time">
-                  {new Date(session.start).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                  {' — '}
-                  {new Date(session.end).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-                <span className="session-duration">
-                  {formatDuration(session.duration_minutes)}
-                </span>
+            {displayDates.map(date => (
+              <div key={date} className="sessions-group">
+                <div className="sessions-date">{date}</div>
+                {groupedSessions[date].reverse().map((session, i) => (
+                  <div key={i} className="session-item">
+                    <span className="session-time">{formatTimeRange(session.start, session.end)}</span>
+                    <span className="session-duration">{formatDuration(session.duration_minutes)}</span>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
+
+          {sortedDates.length > 2 && (
+            <button
+              className="btn-show-more"
+              onClick={() => setShowAllSessions(!showAllSessions)}
+            >
+              {showAllSessions ? (
+                <>
+                  <ChevronUpIcon size={14} />
+                  <span>Свернуть</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDownIcon size={14} />
+                  <span>Показать все ({sortedDates.length - 2} ещё)</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
     </div>

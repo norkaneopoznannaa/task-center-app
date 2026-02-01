@@ -297,6 +297,7 @@ function App() {
               onStatusChange={(taskId, status) => handleUpdateTask(taskId, { status })}
               onStartTimer={handleStartTracking}
               onStopTimer={handleStopTracking}
+              onUpdateTask={handleUpdateTask}
               activeTimers={activeTimers}
             />
           </aside>
