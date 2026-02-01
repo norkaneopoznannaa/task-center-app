@@ -49,6 +49,16 @@
   color: var(--text-muted);
 }
 
+/* Toolbar */
+.tasks-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
 /* Table Container */
 .tasks-table-container {
   flex: 1;

@@ -1,5 +1,5 @@
 /**
- * Script to fetch Jira issue EGISZREMD-15282 using stored credentials
+ * Script to fetch Jira issue EGISZREMD-15309 using stored credentials
  */
 const crypto = require('crypto');
 const os = require('os');
@@ -112,7 +112,7 @@ async function fetchJiraIssue(issueKey, cookie) {
     const options = {
       hostname: 'jira.i-novus.ru',
       port: 443,
-      path: `/rest/api/2/issue/${issueKey}?fields=summary,status,assignee,priority,issuetype,description,created,updated`,
+      path: `/rest/api/2/issue/${issueKey}?fields=summary,status,assignee,priority,issuetype,description,created,updated,duedate`,
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -148,10 +148,7 @@ async function fetchJiraIssue(issueKey, cookie) {
 }
 
 async function main() {
-  // Get issue key from command line arguments
-  const issueKey = process.argv[2] || 'EGISZREMD-15282';
-
-  console.log(`=== Fetching Jira Issue ${issueKey} ===\n`);
+  console.log('=== Fetching Jira Issue EGISZREMD-15309 ===\n');
 
   // Load credentials
   console.log('1. Loading credentials...');
@@ -173,8 +170,8 @@ async function main() {
   console.log('   Login successful!');
 
   // Fetch issue
-  console.log(`\n3. Fetching issue ${issueKey}...`);
-  const issueResult = await fetchJiraIssue(issueKey, loginResult.cookie);
+  console.log('\n3. Fetching issue EGISZREMD-15309...');
+  const issueResult = await fetchJiraIssue('EGISZREMD-15309', loginResult.cookie);
   if (!issueResult.success) {
     console.error(`   Failed to fetch issue: ${issueResult.error}`);
     process.exit(1);
@@ -192,10 +189,11 @@ async function main() {
   console.log(`Assignee: ${fields.assignee?.displayName || 'Unassigned'}`);
   console.log(`Created: ${fields.created}`);
   console.log(`Updated: ${fields.updated}`);
+  console.log(`Due date: ${fields.duedate || 'N/A'}`);
   console.log(`\nDescription:\n${fields.description || 'No description'}`);
 
   // Save to JSON
-  const outputPath = path.join(process.env.USERPROFILE || '', 'Task_Center', 'data', `jira-issue-${issueKey}.json`);
+  const outputPath = path.join(process.env.USERPROFILE || '', 'Task_Center', 'data', 'jira-issue-EGISZREMD-15309.json');
   fs.writeFileSync(outputPath, JSON.stringify(issue, null, 2), 'utf-8');
   console.log(`\n=== Saved to: ${outputPath} ===`);
 }

@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('api', {
   updateTask: (taskId: string, updates: Record<string, unknown>) =>
     ipcRenderer.invoke('update-task', taskId, updates),
   getTasksPath: () => ipcRenderer.invoke('get-tasks-path'),
+  createTask: (taskData: Record<string, unknown>) =>
+    ipcRenderer.invoke('create-task', taskData),
+  deleteTask: (taskId: string) => ipcRenderer.invoke('delete-task', taskId),
+  duplicateTask: (taskId: string) => ipcRenderer.invoke('duplicate-task', taskId),
+  bulkUpdateTasks: (taskIds: string[], updates: Record<string, unknown>) =>
+    ipcRenderer.invoke('bulk-update-tasks', taskIds, updates),
 
   // Time tracking
   startTimeTracking: (taskId: string) => ipcRenderer.invoke('start-time-tracking', taskId),
@@ -112,6 +118,22 @@ declare global {
         updates: Record<string, unknown>
       ) => Promise<{ success: boolean; error?: string }>;
       getTasksPath: () => Promise<string>;
+      createTask: (taskData: Record<string, unknown>) => Promise<{
+        success: boolean;
+        task?: Task;
+        error?: string;
+      }>;
+      deleteTask: (taskId: string) => Promise<{ success: boolean; error?: string }>;
+      duplicateTask: (taskId: string) => Promise<{
+        success: boolean;
+        task?: Task;
+        error?: string;
+      }>;
+      bulkUpdateTasks: (taskIds: string[], updates: Record<string, unknown>) => Promise<{
+        success: boolean;
+        updatedCount?: number;
+        error?: string;
+      }>;
       startTimeTracking: (taskId: string) => Promise<{
         success: boolean;
         startTime?: string;

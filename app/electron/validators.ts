@@ -150,6 +150,44 @@ export const StopTimerParamsSchema = z.object({
   taskId: z.string().min(1, 'Task ID required'),
 });
 
+// Task creation validator (id, metadata, time_tracking will be auto-generated)
+export const CreateTaskParamsSchema = z.object({
+  title: TaskTitleSchema,
+  description: TaskDescriptionSchema.default(''),
+  original_text: z.string().optional(),
+  task_type: TaskTypeSchema.default('Неизвестно'),
+  complexity: ComplexitySchema.default('средняя'),
+  priority: PrioritySchema.default(3),
+  status: StatusSchema.default('новая'),
+  category: z.string().optional(),
+  jira_references: z.array(JiraReferenceSchema).default([]),
+  mentions: z.array(MentionSchema).default([]),
+  dependencies: z.array(z.string()).default([]),
+  deadline: z.string().datetime().nullable().optional(),
+  start_date: z.string().datetime().nullable().optional(),
+  context: TaskContextSchema.optional(),
+  ai_classification_confidence: ConfidenceScoreSchema.optional(),
+  ai_recommendations: z.object({
+    reasoning: z.string().optional(),
+    source: z.string().optional(),
+  }).optional(),
+  user_notes: z.string().default(''),
+  clarifications: z.record(z.string(), z.any()).default({}),
+});
+
+export const DeleteTaskParamsSchema = z.object({
+  taskId: z.string().min(1, 'Task ID required'),
+});
+
+export const DuplicateTaskParamsSchema = z.object({
+  taskId: z.string().min(1, 'Task ID required'),
+});
+
+export const BulkUpdateTasksParamsSchema = z.object({
+  taskIds: z.array(z.string().min(1)).min(1, 'At least one task ID required'),
+  updates: TaskUpdateSchema,
+});
+
 // Worklog validators
 export const WorklogEditSchema = z.object({
   taskId: z.string().min(1),
@@ -178,6 +216,10 @@ export const ApiResponseSchema = z.object({
 export type Task = z.infer<typeof TaskSchema>;
 export type TaskUpdate = z.infer<typeof TaskUpdateSchema>;
 export type UpdateTaskParams = z.infer<typeof UpdateTaskParamsSchema>;
+export type CreateTaskParams = z.infer<typeof CreateTaskParamsSchema>;
+export type DeleteTaskParams = z.infer<typeof DeleteTaskParamsSchema>;
+export type DuplicateTaskParams = z.infer<typeof DuplicateTaskParamsSchema>;
+export type BulkUpdateTasksParams = z.infer<typeof BulkUpdateTasksParamsSchema>;
 export type WorklogEdit = z.infer<typeof WorklogEditSchema>;
 export type JiraConfig = z.infer<typeof JiraConfigSchema>;
 export type ApiResponse = z.infer<typeof ApiResponseSchema>;

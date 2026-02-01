@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Preview - Task Center</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #1f2937;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: white;
+    }
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      max-width: 800px;
+    }
+    .icon-card {
+      background: #374151;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    img {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+    }
+    h1 {
+      margin: 0 0 30px 0;
+    }
+    .size-label {
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <h1>Task Center Icon Preview</h1>
+  <div class="icon-grid">
+    <div class="icon-card">
+      <img src="icon.svg" width="256" height="256" />
+      <div class="size-label">256x256</div>
+    </div>
+    <div class="icon-card">
+      <img src="icon.svg" width="128" height="128" />
+      <div class="size-label">128x128</div>
+    </div>
+    <div class="icon-card">
+      <img src="icon.svg" width="64" height="64" />
+      <div class="size-label">64x64</div>
+    </div>
+    <div class="icon-card">
+      <img src="icon.svg" width="32" height="32" />
+      <div class="size-label">32x32</div>
+    </div>
+    <div class="icon-card">
+      <img src="icon.svg" width="16" height="16" />
+      <div class="size-label">16x16</div>
+    </div>
+  </div>
+  <p style="margin-top: 30px; opacity: 0.6;">Icon for Task Center Desktop App</p>
+</body>
+</html>
