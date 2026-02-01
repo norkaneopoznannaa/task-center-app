@@ -34,6 +34,21 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({ task, onClose }) => {
       <button className="btn-icon close-btn" onClick={onClose} title="Закрыть">
         ✕
       </button>
+
+      <div className="detail-section">
+        <h3 className="task-title">{task.title}</h3>
+        <div className="task-badges">
+          <span className={`badge badge-${getPriorityClass(task.priority)}`}>
+            {PRIORITY_LABELS[task.priority] || task.priority}
+          </span>
+          <span className={`badge badge-${getStatusClass(task.status)}`}>
+            {STATUS_LABELS[task.status] || task.status}
+          </span>
+          {task.task_type && (
+            <span className="badge badge-type">{task.task_type}</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

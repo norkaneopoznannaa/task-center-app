@@ -8,6 +8,9 @@ interface TaskRowProps {
   onStartTracking: (taskId: string) => void;
   onStopTracking: (taskId: string) => void;
   onClick?: () => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (task: Task) => void;
+  onDuplicateTask?: (taskId: string) => void;
 }
 
 const STATUS_OPTIONS: { value: Status; label: string }[] = [
@@ -17,7 +20,7 @@ const STATUS_OPTIONS: { value: Status; label: string }[] = [
   { value: 'заблокирована', label: 'Заблокирована' },
 ];
 
-export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, onClick }: TaskRowProps) {
+export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, onClick, onEditTask, onDeleteTask, onDuplicateTask }: TaskRowProps) {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const isTracking = !!task.time_tracking?.current_session_start;
 
@@ -136,16 +139,18 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
         {task.jira_references.length > 0 ? (
           <div className="jira-links">
             {task.jira_references.map(ref => (
-              <a
-                key={ref.ticket_id}
-                href={ref.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="jira-link"
-                title={ref.url}
-              >
-                {ref.ticket_id}
-              </a>
+              <div key={ref.ticket_id} className="jira-link-item">
+                <a
+                  href={ref.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="jira-link"
+                  title={`Открыть ${ref.ticket_id} в Jira`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {ref.ticket_id} 🔗
+                </a>
+              </div>
             ))}
           </div>
         ) : (
@@ -180,7 +185,10 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
           {isTracking ? (
             <button
               className="btn-icon stop-btn"
-              onClick={() => onStopTracking(task.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStopTracking(task.id);
+              }}
               title="Остановить таймер"
             >
               ⏹️
@@ -188,10 +196,49 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
           ) : (
             <button
               className="btn-icon start-btn"
-              onClick={() => onStartTracking(task.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartTracking(task.id);
+              }}
               title="Начать работу"
             >
               ▶️
+            </button>
+          )}
+          {onEditTask && (
+            <button
+              className="btn-icon edit-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditTask(task);
+              }}
+              title="Редактировать"
+            >
+              ✏️
+            </button>
+          )}
+          {onDuplicateTask && (
+            <button
+              className="btn-icon duplicate-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicateTask(task.id);
+              }}
+              title="Дублировать"
+            >
+              📋
+            </button>
+          )}
+          {onDeleteTask && (
+            <button
+              className="btn-icon delete-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteTask(task);
+              }}
+              title="Удалить"
+            >
+              🗑️
             </button>
           )}
         </div>

@@ -1,50 +1,13 @@
 import React from 'react';
-import { Task, PRIORITY_LABELS, STATUS_LABELS } from '../../types';
+import { Task } from '../../types';
 
 interface TaskContentProps {
   task: Task;
 }
 
-const getPriorityClass = (priority: string): string => {
-  const map: Record<string, string> = {
-    CRITICAL: 'critical',
-    HIGH: 'high',
-    MEDIUM: 'medium',
-    LOW: 'low',
-    BACKLOG: 'backlog',
-  };
-  return map[priority] || 'medium';
-};
-
-const getStatusClass = (status: string): string => {
-  const map: Record<string, string> = {
-    'новая': 'new',
-    'в работе': 'progress',
-    'выполнена': 'done',
-    'заблокирована': 'blocked',
-  };
-  return map[status] || 'new';
-};
-
 export const TaskContent: React.FC<TaskContentProps> = ({ task }) => {
   return (
     <>
-      {/* Title and Badges */}
-      <div className="detail-section">
-        <h3 className="task-title">{task.title}</h3>
-        <div className="task-badges">
-          <span className={`badge badge-${getPriorityClass(task.priority)}`}>
-            {PRIORITY_LABELS[task.priority] || task.priority}
-          </span>
-          <span className={`badge badge-${getStatusClass(task.status)}`}>
-            {STATUS_LABELS[task.status] || task.status}
-          </span>
-          {task.task_type && (
-            <span className="badge badge-type">{task.task_type}</span>
-          )}
-        </div>
-      </div>
-
       {/* Description */}
       {task.description && (
         <div className="detail-section">

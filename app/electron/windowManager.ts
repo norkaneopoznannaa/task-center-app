@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, nativeImage } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { DEV_SERVER_PORT, WINDOW_CONFIG } from './constants';
 import { startFileWatcher, stopFileWatcher } from './fileWatcher';
@@ -10,10 +10,6 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 export function createWindow() {
-  // Путь к иконке (PNG для лучшей поддержки в Windows)
-  const iconPath = path.join(__dirname, '../public/icon.png');
-  const icon = nativeImage.createFromPath(iconPath);
-
   mainWindow = new BrowserWindow({
     width: WINDOW_CONFIG.width,
     height: WINDOW_CONFIG.height,
@@ -21,7 +17,6 @@ export function createWindow() {
     minHeight: WINDOW_CONFIG.minHeight,
     frame: false, // Кастомный заголовок
     titleBarStyle: 'hidden',
-    icon: icon, // Иконка приложения
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

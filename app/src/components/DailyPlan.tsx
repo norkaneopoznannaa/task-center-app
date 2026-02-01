@@ -23,7 +23,6 @@ interface DailyPlanProps {
   tasks: Task[];
   onTaskClick: (task: Task) => void;
   onStartTimer: (taskId: string) => void;
-  onStopTimer: (taskId: string) => void;
   activeTimers: Record<string, { startTime: Date; elapsed: number }>;
 }
 
@@ -34,7 +33,6 @@ interface SortableTaskProps {
   isActive: boolean;
   onTaskClick: (task: Task) => void;
   onStartTimer: (taskId: string) => void;
-  onStopTimer: (taskId: string) => void;
   getPriorityClass: (priority: string) => string;
   getCategoryClass: (category: string) => string;
   getPriorityIcon: (priority: string) => string;
@@ -50,7 +48,6 @@ const SortableTaskItem: React.FC<SortableTaskProps> = ({
   isActive,
   onTaskClick,
   onStartTimer,
-  onStopTimer,
   getPriorityClass,
   getCategoryClass,
   getPriorityIcon,
@@ -133,13 +130,9 @@ const SortableTaskItem: React.FC<SortableTaskProps> = ({
         className={`start-btn ${isActive ? 'active' : ''}`}
         onClick={(e) => {
           e.stopPropagation();
-          if (isActive) {
-            onStopTimer(task.id);
-          } else {
-            onStartTimer(task.id);
-          }
+          onStartTimer(task.id);
         }}
-        title={isActive ? 'Остановить таймер' : 'Начать работу'}
+        title={isActive ? 'Таймер активен' : 'Начать работу'}
       >
         {isActive ? '⏸' : '▶'}
       </button>
@@ -153,7 +146,6 @@ export const DailyPlan: React.FC<DailyPlanProps> = ({
   tasks,
   onTaskClick,
   onStartTimer,
-  onStopTimer,
   activeTimers,
 }) => {
   // Ручной порядок задач (массив ID)
@@ -421,7 +413,6 @@ export const DailyPlan: React.FC<DailyPlanProps> = ({
                     isActive={!!activeTimers[task.id]}
                     onTaskClick={onTaskClick}
                     onStartTimer={onStartTimer}
-                    onStopTimer={onStopTimer}
                     getPriorityClass={getPriorityClass}
                     getCategoryClass={getCategoryClass}
                     getPriorityIcon={getPriorityIcon}
