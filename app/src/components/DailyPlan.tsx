@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Task, PRIORITY_LABELS } from '../types';
+import { Task, PRIORITY_LABELS, normalizePriority, getPriorityLabel } from '../types';
 import './DailyPlan.css';
 
 interface DailyPlanProps {
@@ -24,6 +24,8 @@ interface DailyPlanProps {
   onTaskClick: (task: Task) => void;
   onStartTimer: (taskId: string) => void;
   activeTimers: Record<string, { startTime: Date; elapsed: number }>;
+  pinnedTaskIds?: string[];
+  onPinTask?: (taskId: string) => void;
 }
 
 interface SortableTaskProps {
@@ -89,7 +91,7 @@ const SortableTaskItem: React.FC<SortableTaskProps> = ({
 
       <div className="task-rank">
         <span className="rank-number">{index + 1}</span>
-        <span className="rank-icon">{getPriorityIcon(task.priority)}</span>
+        <span className="rank-icon">{getPriorityIcon(normalizePriority(task.priority))}</span>
       </div>
 
       <div className="task-info">
@@ -108,10 +110,10 @@ const SortableTaskItem: React.FC<SortableTaskProps> = ({
             </span>
           )}
           <span
-            className={`priority-tag ${getPriorityClass(task.priority)}`}
+            className={`priority-tag ${getPriorityClass(normalizePriority(task.priority))}`}
             title={`Priority Score: ${Math.round(score)} - ${getScoreLabel(score)}`}
           >
-            {PRIORITY_LABELS[task.priority] || task.priority}
+            {getPriorityLabel(task.priority)}
           </span>
           {deadline && (
             <span className={`deadline-tag ${deadline.class}`}>
@@ -147,6 +149,7 @@ export const DailyPlan: React.FC<DailyPlanProps> = ({
   onTaskClick,
   onStartTimer,
   activeTimers,
+  pinnedTaskIds = [],
 }) => {
   // Ручной порядок задач (массив ID)
   const [manualOrder, setManualOrder] = useState<string[]>(() => {
@@ -189,7 +192,8 @@ export const DailyPlan: React.FC<DailyPlanProps> = ({
         LOW: 25,
         BACKLOG: 10,
       };
-      score += (priorityScores[task.priority] || 50) * 0.3;
+      const normalizedPriority = normalizePriority(task.priority);
+      score += (priorityScores[normalizedPriority] || 50) * 0.3;
 
       // 2. Дедлайн (25%)
       if (task.deadline) {
@@ -242,26 +246,41 @@ export const DailyPlan: React.FC<DailyPlanProps> = ({
 
   // Финальный план с учётом ручного порядка
   const dailyPlan = useMemo(() => {
+    // Сначала добавляем закреплённые задачи (вручную добавленные через кнопку)
+    const pinnedTasks = pinnedTaskIds
+      .map(id => {
+        const task = tasks.find(t => t.id === id);
+        if (task && task.status !== 'завершена' && task.status !== 'выполнена') {
+          return { task, score: 100 }; // Высокий score для закреплённых
+        }
+        return null;
+      })
+      .filter(Boolean) as { task: Task; score: number }[];
+
     const sortedByScore = [...scoredTasks]
+      .filter(t => !pinnedTaskIds.includes(t.task.id)) // Исключаем уже закреплённые
       .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+      .slice(0, 10 - pinnedTasks.length);
+
+    // Объединяем закреплённые и автоматические
+    const combined = [...pinnedTasks, ...sortedByScore];
 
     if (manualOrder.length > 0) {
-      const taskIds = sortedByScore.map(t => t.task.id);
+      const taskIds = combined.map(t => t.task.id);
       const validManualOrder = manualOrder.filter(id => taskIds.includes(id));
 
       if (validManualOrder.length > 0) {
         const ordered = validManualOrder
-          .map(id => sortedByScore.find(t => t.task.id === id))
-          .filter(Boolean) as typeof sortedByScore;
+          .map(id => combined.find(t => t.task.id === id))
+          .filter(Boolean) as typeof combined;
 
-        const newTasks = sortedByScore.filter(t => !validManualOrder.includes(t.task.id));
-        return [...ordered, ...newTasks].slice(0, 5);
+        const newTasks = combined.filter(t => !validManualOrder.includes(t.task.id));
+        return [...ordered, ...newTasks].slice(0, 10);
       }
     }
 
-    return sortedByScore;
-  }, [scoredTasks, manualOrder]);
+    return combined.slice(0, 10);
+  }, [scoredTasks, manualOrder, pinnedTaskIds, tasks]);
 
   // Сохраняем порядок в localStorage
   useEffect(() => {
@@ -316,6 +335,9 @@ export const DailyPlan: React.FC<DailyPlanProps> = ({
     const map: Record<string, string> = {
       'РЭМД': 'remd',
       'КУ ФЭР': 'kufer',
+      'Общие': 'common',
+      'Авто': 'auto',
+      // Fallback для lowercase (обратная совместимость)
       'общие': 'common',
       'авто': 'auto',
     };

@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Task, Status } from '../types';
+import { Task, Status, normalizePriority, getPriorityLabel } from '../types';
+import {
+  PlayIcon,
+  StopIcon,
+  EditIcon,
+  TrashIcon,
+  CopyIcon,
+  CalendarIcon,
+  ClockIcon,
+  ExternalLinkIcon,
+} from './icons';
 import './TaskRow.css';
 
 interface TaskRowProps {
@@ -11,6 +21,7 @@ interface TaskRowProps {
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (task: Task) => void;
   onDuplicateTask?: (taskId: string) => void;
+  onAddToDailyPlan?: (taskId: string) => void;
 }
 
 const STATUS_OPTIONS: { value: Status; label: string }[] = [
@@ -20,7 +31,7 @@ const STATUS_OPTIONS: { value: Status; label: string }[] = [
   { value: 'заблокирована', label: 'Заблокирована' },
 ];
 
-export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, onClick, onEditTask, onDeleteTask, onDuplicateTask }: TaskRowProps) {
+export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, onClick, onEditTask, onDeleteTask, onDuplicateTask, onAddToDailyPlan }: TaskRowProps) {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const isTracking = !!task.time_tracking?.current_session_start;
 
@@ -42,7 +53,8 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
   }, [isTracking, task.time_tracking?.current_session_start]);
 
   const getPriorityClass = () => {
-    switch (task.priority) {
+    const normalized = normalizePriority(task.priority);
+    switch (normalized) {
       case 'CRITICAL': return 'badge-critical';
       case 'HIGH': return 'badge-high';
       case 'MEDIUM': return 'badge-medium';
@@ -105,7 +117,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
       {/* Priority */}
       <td>
         <span className={`badge ${getPriorityClass()}`}>
-          {task.priority}
+          {getPriorityLabel(task.priority)}
         </span>
       </td>
 
@@ -148,7 +160,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
                   title={`Открыть ${ref.ticket_id} в Jira`}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {ref.ticket_id} 🔗
+                  {ref.ticket_id} <ExternalLinkIcon size={12} />
                 </a>
               </div>
             ))}
@@ -163,7 +175,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
         <div className="time-cell">
           {isTracking ? (
             <span className="time-tracking-active">
-              ⏱️ {formatElapsed(elapsedTime)}
+              <ClockIcon size={14} /> {formatElapsed(elapsedTime)}
             </span>
           ) : (
             <span className="time-total">
@@ -191,7 +203,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
               }}
               title="Остановить таймер"
             >
-              ⏹️
+              <StopIcon size={14} />
             </button>
           ) : (
             <button
@@ -202,7 +214,19 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
               }}
               title="Начать работу"
             >
-              ▶️
+              <PlayIcon size={14} />
+            </button>
+          )}
+          {onAddToDailyPlan && (
+            <button
+              className="btn-icon plan-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToDailyPlan(task.id);
+              }}
+              title="Добавить в план на день"
+            >
+              <CalendarIcon size={14} />
             </button>
           )}
           {onEditTask && (
@@ -214,7 +238,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
               }}
               title="Редактировать"
             >
-              ✏️
+              <EditIcon size={14} />
             </button>
           )}
           {onDuplicateTask && (
@@ -226,7 +250,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
               }}
               title="Дублировать"
             >
-              📋
+              <CopyIcon size={14} />
             </button>
           )}
           {onDeleteTask && (
@@ -238,7 +262,7 @@ export function TaskRow({ task, onUpdateTask, onStartTracking, onStopTracking, o
               }}
               title="Удалить"
             >
-              🗑️
+              <TrashIcon size={14} />
             </button>
           )}
         </div>
