@@ -36,4 +36,4 @@ export const WINDOW_CONFIG = {
 } as const;
 
 // Dev server port
-export const DEV_SERVER_PORT = 5176;
+export const DEV_SERVER_PORT = 5175;
