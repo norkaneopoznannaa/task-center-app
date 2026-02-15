@@ -219,6 +219,26 @@ export function WorklogsPage({ tasks }: WorklogsPageProps) {
     });
   };
 
+  // Reset worklog errors
+  const handleResetErrors = async () => {
+    try {
+      const result = await window.api.resetWorklogErrors();
+      if (result.success) {
+        if (result.resetCount > 0) {
+          toast.success(`Сброшено ${result.resetCount} ошибок`);
+          loadWorklogs();
+        } else {
+          toast.success('Нет ошибок для сброса');
+        }
+      } else {
+        toast.error(result.error || 'Ошибка сброса');
+      }
+    } catch (error) {
+      console.error('Error resetting errors:', error);
+      toast.error('Ошибка сброса');
+    }
+  };
+
   // Calculate totals
   const totalMinutes = worklogs.reduce((sum, w) => sum + w.durationMinutes, 0);
   const pendingCount = worklogs.filter(w => w.status === 'pending').length;
@@ -294,6 +314,13 @@ export function WorklogsPage({ tasks }: WorklogsPageProps) {
           <div className="summary-item">
             <span className="summary-value error">{errorCount}</span>
             <span className="summary-label">Ошибки</span>
+            <button
+              className="btn btn-small btn-reset"
+              onClick={handleResetErrors}
+              title="Сбросить ошибки и повторить выгрузку"
+            >
+              Сбросить
+            </button>
           </div>
         )}
       </div>

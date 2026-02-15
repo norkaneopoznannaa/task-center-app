@@ -18,6 +18,7 @@ import { TASKS_FILE_PATH, CACHE_TTL } from './constants';
 import { TasksCache } from './cache';
 import { getMainWindow } from './windowManager';
 import { stopFileWatcher } from './fileWatcher';
+import { withFileLock } from './file-lock';
 
 const tasksCache = new TasksCache(CACHE_TTL);
 
@@ -104,43 +105,45 @@ export function registerIpcHandlers() {
 
       const { taskId: validTaskId, updates: validUpdates } = validation.data;
 
-      // Async проверка существования файла
-      try {
-        await fsPromises.access(TASKS_FILE_PATH);
-      } catch {
-        return { success: false, error: 'tasks.json not found' };
-      }
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        // Async проверка существования файла
+        try {
+          await fsPromises.access(TASKS_FILE_PATH);
+        } catch {
+          return { success: false, error: 'tasks.json not found' };
+        }
 
-      // Async чтение
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+        // Async чтение
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
-      if (taskIndex === -1) {
-        return { success: false, error: 'Task not found' };
-      }
+        const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+        if (taskIndex === -1) {
+          return { success: false, error: 'Task not found' };
+        }
 
-      // Обновляем задачу
-      data.tasks[taskIndex] = {
-        ...data.tasks[taskIndex],
-        ...validUpdates,
-        metadata: {
-          ...data.tasks[taskIndex].metadata,
-          updated_at: new Date().toISOString(),
-        },
-      };
+        // Обновляем задачу
+        data.tasks[taskIndex] = {
+          ...data.tasks[taskIndex],
+          ...validUpdates,
+          metadata: {
+            ...data.tasks[taskIndex].metadata,
+            updated_at: new Date().toISOString(),
+          },
+        };
 
-      // Обновляем время изменения файла
-      data.updated_at = new Date().toISOString();
+        // Обновляем время изменения файла
+        data.updated_at = new Date().toISOString();
 
-      // Async запись
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+        // Async запись
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after update-task');
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after update-task');
 
-      return { success: true };
+        return { success: true };
+      });
     } catch (error) {
       console.error('Error updating task:', error);
       return { success: false, error: String(error) };
@@ -158,31 +161,33 @@ export function registerIpcHandlers() {
 
       const { taskId: validTaskId } = validation.data;
 
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
-      if (taskIndex === -1) {
-        return { success: false, error: 'Task not found' };
-      }
+        const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+        if (taskIndex === -1) {
+          return { success: false, error: 'Task not found' };
+        }
 
-      // Добавляем время начала
-      if (!data.tasks[taskIndex].time_tracking) {
-        data.tasks[taskIndex].time_tracking = {
-          sessions: [],
-          total_minutes: 0,
-        };
-      }
+        // Добавляем время начала
+        if (!data.tasks[taskIndex].time_tracking) {
+          data.tasks[taskIndex].time_tracking = {
+            sessions: [],
+            total_minutes: 0,
+          };
+        }
 
-      data.tasks[taskIndex].time_tracking.current_session_start = new Date().toISOString();
-      data.tasks[taskIndex].status = 'в работе';
-      data.tasks[taskIndex].metadata.last_status_change = new Date().toISOString();
-      data.updated_at = new Date().toISOString();
+        data.tasks[taskIndex].time_tracking.current_session_start = new Date().toISOString();
+        data.tasks[taskIndex].status = 'в работе';
+        data.tasks[taskIndex].metadata.last_status_change = new Date().toISOString();
+        data.updated_at = new Date().toISOString();
 
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
-      tasksCache.invalidate('all-tasks');
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+        tasksCache.invalidate('all-tasks');
 
-      return { success: true, startTime: data.tasks[taskIndex].time_tracking.current_session_start };
+        return { success: true, startTime: data.tasks[taskIndex].time_tracking.current_session_start };
+      });
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -199,49 +204,51 @@ export function registerIpcHandlers() {
 
       const { taskId: validTaskId } = validation.data;
 
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
-      if (taskIndex === -1) {
-        return { success: false, error: 'Task not found' };
-      }
+        const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+        if (taskIndex === -1) {
+          return { success: false, error: 'Task not found' };
+        }
 
-      const task = data.tasks[taskIndex];
-      if (!task.time_tracking?.current_session_start) {
-        return { success: false, error: 'No active session' };
-      }
+        const task = data.tasks[taskIndex];
+        if (!task.time_tracking?.current_session_start) {
+          return { success: false, error: 'No active session' };
+        }
 
-      const startTime = new Date(task.time_tracking.current_session_start);
-      const endTime = new Date();
-      const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+        const startTime = new Date(task.time_tracking.current_session_start);
+        const endTime = new Date();
+        const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
 
-      // Сохраняем сессию
-      task.time_tracking.sessions.push({
-        start: task.time_tracking.current_session_start,
-        end: endTime.toISOString(),
-        duration_minutes: durationMinutes,
+        // Сохраняем сессию
+        task.time_tracking.sessions.push({
+          start: task.time_tracking.current_session_start,
+          end: endTime.toISOString(),
+          duration_minutes: durationMinutes,
+        });
+
+        task.time_tracking.total_minutes += durationMinutes;
+        delete task.time_tracking.current_session_start;
+
+        // Обновляем actual_hours
+        task.metadata.actual_hours = Math.round((task.time_tracking.total_minutes / 60) * 10) / 10;
+        task.metadata.updated_at = new Date().toISOString();
+        data.updated_at = new Date().toISOString();
+
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after stop-time-tracking');
+
+        return {
+          success: true,
+          durationMinutes,
+          totalMinutes: task.time_tracking.total_minutes,
+        };
       });
-
-      task.time_tracking.total_minutes += durationMinutes;
-      delete task.time_tracking.current_session_start;
-
-      // Обновляем actual_hours
-      task.metadata.actual_hours = Math.round((task.time_tracking.total_minutes / 60) * 10) / 10;
-      task.metadata.updated_at = new Date().toISOString();
-      data.updated_at = new Date().toISOString();
-
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
-
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after stop-time-tracking');
-
-      return {
-        success: true,
-        durationMinutes,
-        totalMinutes: task.time_tracking.total_minutes,
-      };
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -267,45 +274,47 @@ export function registerIpcHandlers() {
 
       const validTaskData = validation.data;
 
-      // Читаем существующие задачи
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        // Читаем существующие задачи
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const now = new Date().toISOString();
+        const now = new Date().toISOString();
 
-      // Создаём новую задачу с автогенерируемыми полями
-      const newTask = {
-        ...validTaskData,
-        id: randomUUID(),
-        time_tracking: {
-          sessions: [],
-          total_minutes: 0,
-        },
-        metadata: {
-          created_at: now,
-          updated_at: now,
-          last_status_change: now,
-          estimated_hours: null,
-          actual_hours: null,
-          tags: [],
-        },
-      };
+        // Создаем новую задачу с автогенерируемыми полями
+        const newTask = {
+          ...validTaskData,
+          id: randomUUID(),
+          time_tracking: {
+            sessions: [],
+            total_minutes: 0,
+          },
+          metadata: {
+            created_at: now,
+            updated_at: now,
+            last_status_change: now,
+            estimated_hours: null,
+            actual_hours: null,
+            tags: [],
+          },
+        };
 
-      // Добавляем задачу в массив
-      data.tasks.push(newTask);
-      data.updated_at = now;
+        // Добавляем задачу в массив
+        data.tasks.push(newTask);
+        data.updated_at = now;
 
-      // Сохраняем
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+        // Сохраняем
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after create-task');
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after create-task');
 
-      return {
-        success: true,
-        task: newTask,
-      };
+        return {
+          success: true,
+          task: newTask,
+        };
+      });
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -322,27 +331,29 @@ export function registerIpcHandlers() {
 
       const validTaskId = validation.data.taskId;
 
-      // Читаем задачи
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        // Читаем задачи
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
-      if (taskIndex === -1) {
-        return { success: false, error: 'Task not found' };
-      }
+        const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+        if (taskIndex === -1) {
+          return { success: false, error: 'Task not found' };
+        }
 
-      // Удаляем задачу
-      data.tasks.splice(taskIndex, 1);
-      data.updated_at = new Date().toISOString();
+        // Удаляем задачу
+        data.tasks.splice(taskIndex, 1);
+        data.updated_at = new Date().toISOString();
 
-      // Сохраняем
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+        // Сохраняем
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after delete-task');
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after delete-task');
 
-      return { success: true };
+        return { success: true };
+      });
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -359,52 +370,54 @@ export function registerIpcHandlers() {
 
       const validTaskId = validation.data.taskId;
 
-      // Читаем задачи
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        // Читаем задачи
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
-      if (taskIndex === -1) {
-        return { success: false, error: 'Task not found' };
-      }
+        const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === validTaskId);
+        if (taskIndex === -1) {
+          return { success: false, error: 'Task not found' };
+        }
 
-      const originalTask = data.tasks[taskIndex];
-      const now = new Date().toISOString();
+        const originalTask = data.tasks[taskIndex];
+        const now = new Date().toISOString();
 
-      // Создаём копию с новым ID и обновлённым временем
-      const duplicatedTask = {
-        ...originalTask,
-        id: randomUUID(),
-        title: `${originalTask.title} (копия)`,
-        status: 'новая',
-        time_tracking: {
-          sessions: [],
-          total_minutes: 0,
-        },
-        metadata: {
-          ...originalTask.metadata,
-          created_at: now,
-          updated_at: now,
-          last_status_change: now,
-          actual_hours: null,
-        },
-      };
+        // Создаем копию с новым ID и обновленным временем
+        const duplicatedTask = {
+          ...originalTask,
+          id: randomUUID(),
+          title: `${originalTask.title} (копия)`,
+          status: 'новая',
+          time_tracking: {
+            sessions: [],
+            total_minutes: 0,
+          },
+          metadata: {
+            ...originalTask.metadata,
+            created_at: now,
+            updated_at: now,
+            last_status_change: now,
+            actual_hours: null,
+          },
+        };
 
-      // Добавляем после оригинала
-      data.tasks.splice(taskIndex + 1, 0, duplicatedTask);
-      data.updated_at = now;
+        // Добавляем после оригинала
+        data.tasks.splice(taskIndex + 1, 0, duplicatedTask);
+        data.updated_at = now;
 
-      // Сохраняем
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+        // Сохраняем
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after duplicate-task');
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after duplicate-task');
 
-      return {
-        success: true,
-        task: duplicatedTask,
-      };
+        return {
+          success: true,
+          task: duplicatedTask,
+        };
+      });
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -421,49 +434,51 @@ export function registerIpcHandlers() {
 
       const { taskIds: validTaskIds, updates: validUpdates } = validation.data;
 
-      // Читаем задачи
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      return await withFileLock(TASKS_FILE_PATH, async () => {
+        // Читаем задачи
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const now = new Date().toISOString();
-      let updatedCount = 0;
+        const now = new Date().toISOString();
+        let updatedCount = 0;
 
-      // Обновляем каждую задачу
-      for (const task of data.tasks) {
-        if (validTaskIds.includes(task.id)) {
-          // Применяем обновления
-          Object.assign(task, validUpdates);
+        // Обновляем каждую задачу
+        for (const task of data.tasks) {
+          if (validTaskIds.includes(task.id)) {
+            // Применяем обновления
+            Object.assign(task, validUpdates);
 
-          // Обновляем метаданные
-          task.metadata = task.metadata || {};
-          task.metadata.updated_at = now;
+            // Обновляем метаданные
+            task.metadata = task.metadata || {};
+            task.metadata.updated_at = now;
 
-          // Обновляем last_status_change если менялся статус
-          if (validUpdates.status && validUpdates.status !== task.status) {
-            task.metadata.last_status_change = now;
+            // Обновляем last_status_change если менялся статус
+            if (validUpdates.status && validUpdates.status !== task.status) {
+              task.metadata.last_status_change = now;
+            }
+
+            updatedCount++;
           }
-
-          updatedCount++;
         }
-      }
 
-      if (updatedCount === 0) {
-        return { success: false, error: 'No tasks found with provided IDs' };
-      }
+        if (updatedCount === 0) {
+          return { success: false, error: 'No tasks found with provided IDs' };
+        }
 
-      data.updated_at = now;
+        data.updated_at = now;
 
-      // Сохраняем
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+        // Сохраняем
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after bulk-update-tasks');
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after bulk-update-tasks');
 
-      return {
-        success: true,
-        updatedCount,
-      };
+        return {
+          success: true,
+          updatedCount,
+        };
+      });
     } catch (error) {
       return { success: false, error: String(error) };
     }
@@ -483,79 +498,95 @@ export function registerIpcHandlers() {
     }
   ) => {
     try {
-      const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
-      const data = JSON.parse(content);
+      // Lock tasks.json for the read-modify-write cycle
+      const taskResult = await withFileLock(TASKS_FILE_PATH, async () => {
+        const content = await fsPromises.readFile(TASKS_FILE_PATH, 'utf-8');
+        const data = JSON.parse(content);
 
-      const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === taskId);
-      if (taskIndex === -1) {
-        return { success: false, error: 'Task not found' };
-      }
+        const taskIndex = data.tasks.findIndex((t: { id: string }) => t.id === taskId);
+        if (taskIndex === -1) {
+          return { success: false as const, error: 'Task not found' };
+        }
 
-      const task = data.tasks[taskIndex];
-      if (!task.time_tracking?.current_session_start) {
-        return { success: false, error: 'No active session' };
-      }
+        const task = data.tasks[taskIndex];
+        if (!task.time_tracking?.current_session_start) {
+          return { success: false as const, error: 'No active session' };
+        }
 
-      const startTime = new Date(task.time_tracking.current_session_start);
-      const endTime = new Date();
-      const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+        const startTime = new Date(task.time_tracking.current_session_start);
+        const endTime = new Date();
+        const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
 
-      // Сохраняем сессию в time_tracking
-      task.time_tracking.sessions.push({
-        start: task.time_tracking.current_session_start,
-        end: endTime.toISOString(),
-        duration_minutes: durationMinutes,
+        // Сохраняем сессию в time_tracking
+        task.time_tracking.sessions.push({
+          start: task.time_tracking.current_session_start,
+          end: endTime.toISOString(),
+          duration_minutes: durationMinutes,
+        });
+
+        task.time_tracking.total_minutes += durationMinutes;
+        delete task.time_tracking.current_session_start;
+
+        // Обновляем actual_hours
+        task.metadata.actual_hours = Math.round((task.time_tracking.total_minutes / 60) * 10) / 10;
+        task.metadata.updated_at = new Date().toISOString();
+        data.updated_at = new Date().toISOString();
+
+        // Сохраняем tasks.json
+        await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+        // Инвалидируем кэш
+        tasksCache.invalidate('all-tasks');
+        console.log('Cache invalidated after stop-time-tracking-with-worklog');
+
+        return {
+          success: true as const,
+          durationMinutes,
+          totalMinutes: task.time_tracking.total_minutes,
+          taskId: task.id,
+          taskTitle: task.title,
+          jiraKey: task.jira_references?.[0]?.ticket_id || null,
+          startTime,
+          endTime,
+        };
       });
 
-      task.time_tracking.total_minutes += durationMinutes;
-      delete task.time_tracking.current_session_start;
+      if (!taskResult.success) {
+        return { success: false, error: taskResult.error };
+      }
 
-      // Обновляем actual_hours
-      task.metadata.actual_hours = Math.round((task.time_tracking.total_minutes / 60) * 10) / 10;
-      task.metadata.updated_at = new Date().toISOString();
-      data.updated_at = new Date().toISOString();
-
-      // Сохраняем tasks.json
-      await fsPromises.writeFile(TASKS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
-
-      // Инвалидируем кэш
-      tasksCache.invalidate('all-tasks');
-      console.log('Cache invalidated after stop-time-tracking-with-worklog');
-
-      // ✅ НОВОЕ: Автоматически создаем worklog
+      // Worklog creation happens outside the tasks.json lock
       let worklog = null;
       if (options?.autoCreateWorklog !== false) {
-        const jiraKey = task.jira_references?.[0]?.ticket_id || null;
-
-        // Базовое описание (AI генерация будет добавлена позже)
-        const durationHours = Math.round((durationMinutes / 60) * 10) / 10;
-        const description = options?.suggestDescription && jiraKey ? `Работа над задачей ${task.title} (${durationHours}ч)` : '';
+        const durationHours = Math.round((taskResult.durationMinutes / 60) * 10) / 10;
+        const description = options?.suggestDescription && taskResult.jiraKey
+          ? `Работа над задачей ${taskResult.taskTitle} (${durationHours}ч)`
+          : '';
 
         const worklogData = {
-          taskId: task.id,
-          jiraKey: jiraKey,
-          date: formatDate(startTime),
-          startTime: formatTime(startTime),
-          endTime: formatTime(endTime),
-          durationMinutes: durationMinutes,
+          taskId: taskResult.taskId,
+          jiraKey: taskResult.jiraKey,
+          date: formatDate(taskResult.startTime),
+          startTime: formatTime(taskResult.startTime),
+          endTime: formatTime(taskResult.endTime),
+          durationMinutes: taskResult.durationMinutes,
           description: description,
-          taskTitle: task.title,
+          taskTitle: taskResult.taskTitle,
         };
 
-        // Добавляем в worklogs.json
         const worklogResult = await worklogStorage.addWorklog(worklogData);
         if (worklogResult.success) {
           worklog = worklogResult.worklog;
-          console.log('✅ Auto-created worklog:', worklog?.id);
+          console.log('Auto-created worklog:', worklog?.id);
         } else {
-          console.error('❌ Failed to auto-create worklog:', worklogResult.error);
+          console.error('Failed to auto-create worklog:', worklogResult.error);
         }
       }
 
       return {
         success: true,
-        durationMinutes,
-        totalMinutes: task.time_tracking.total_minutes,
+        durationMinutes: taskResult.durationMinutes,
+        totalMinutes: taskResult.totalMinutes,
         worklog: worklog,
       };
     } catch (error) {
@@ -608,6 +639,10 @@ export function registerIpcHandlers() {
     return worklogStorage.getWorklogsPath();
   });
 
+  ipcMain.handle('reset-worklog-errors', async () => {
+    return worklogStorage.resetWorklogErrors();
+  });
+
   // ============================================================================
   // JIRA CONFIG HANDLERS
   // ============================================================================
@@ -636,11 +671,14 @@ export function registerIpcHandlers() {
 
   ipcMain.handle('add-jira-worklog', async (_event, issueKey: string, started: string, timeSpentSeconds: number, comment: string) => {
     try {
+      // Log incoming parameters for debugging
+      console.log('add-jira-worklog called with:', { issueKey, started, timeSpentSeconds, commentLength: comment?.length });
+
       // Validate parameters
       const params = { issueKey, started, timeSpentSeconds, comment };
       const schema = z.object({
         issueKey: z.string().regex(/^[A-Z][A-Z0-9]+-\d+$/, 'Invalid Jira key format'),
-        started: z.string().datetime('Invalid datetime format'),
+        started: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{4}$/, 'Invalid datetime format (expected: YYYY-MM-DDTHH:mm:ss.SSS+HHMM)'),
         timeSpentSeconds: z.number().min(0, 'Time must be non-negative'),
         comment: z.string().min(1, 'Comment required').max(1000, 'Comment too long'),
       });
@@ -671,7 +709,7 @@ export function registerIpcHandlers() {
       const schema = z.object({
         issueKey: z.string().regex(/^[A-Z][A-Z0-9]+-\d+$/, 'Invalid Jira key format'),
         worklogId: z.string().min(1, 'Worklog ID required'),
-        started: z.string().datetime('Invalid datetime format'),
+        started: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{4}$/, 'Invalid datetime format (expected: YYYY-MM-DDTHH:mm:ss.SSS+HHMM)'),
         timeSpentSeconds: z.number().min(0, 'Time must be non-negative'),
         comment: z.string().min(1, 'Comment required').max(1000, 'Comment too long'),
       });

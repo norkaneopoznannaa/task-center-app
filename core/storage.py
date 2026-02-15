@@ -20,9 +20,9 @@ class TaskStorage:
 
         self.data_dir.mkdir(exist_ok=True)
 
-        self.tasks_file = Config.get_tasks_file()
-        self.history_file = Config.get_history_file()
-        self.metadata_file = Config.get_metadata_file()
+        self.tasks_file = self.data_dir / "tasks.json"
+        self.history_file = self.data_dir / "history.json"
+        self.metadata_file = self.data_dir / "metadata.json"
 
     def save_tasks(self, tasks: List[Task]):
         """Сохранение списка задач"""
@@ -156,12 +156,14 @@ class TaskStorage:
 
         from collections import Counter
         from core.models import Status, Priority, TaskType
+        from datetime import timezone
 
+        now = datetime.now(timezone.utc)
         return {
             'total_tasks': len(tasks),
             'by_status': dict(Counter(t.status.value for t in tasks)),
             'by_priority': dict(Counter(t.priority.name for t in tasks)),
             'by_type': dict(Counter(t.task_type.value for t in tasks)),
             'with_deadline': len([t for t in tasks if t.deadline]),
-            'overdue': len([t for t in tasks if t.deadline and t.deadline < datetime.now() and t.status != Status.DONE]),
+            'overdue': len([t for t in tasks if t.deadline and t.deadline < now and t.status != Status.DONE]),
         }

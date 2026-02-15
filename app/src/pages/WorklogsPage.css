@@ -76,6 +76,25 @@
   text-transform: uppercase;
 }
 
+.btn-small {
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  margin-top: 4px;
+}
+
+.btn-reset {
+  background: var(--priority-critical);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-reset:hover {
+  background: #dc2626;
+}
+
 .worklogs-list {
   flex: 1;
   overflow-y: auto;

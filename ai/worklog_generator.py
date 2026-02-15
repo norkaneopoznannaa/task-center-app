@@ -89,8 +89,9 @@ class WorklogDescriptionGenerator:
 
         except Exception as e:
             logger.error(f"Failed to generate description: {e}")
-            # Fallback на базовое описание
-            return self._fallback_description(task_title, duration_minutes)
+            # Fallback на базовое описание с использованием git commits
+            git_commits = context.get('git_commits', [])
+            return self._fallback_description(task_title, duration_minutes, git_commits)
 
     def _gather_context(
         self,
@@ -276,10 +277,32 @@ class WorklogDescriptionGenerator:
 
         return description
 
-    def _fallback_description(self, task_title: str, duration_minutes: int) -> str:
-        """Fallback описание если AI недоступен"""
+    def _fallback_description(
+        self,
+        task_title: str,
+        duration_minutes: int,
+        git_commits: Optional[List[Dict[str, str]]] = None
+    ) -> str:
+        """
+        Fallback описание если AI недоступен.
+
+        Приоритет:
+        1. Git commits (если есть)
+        2. Запрос ручного ввода (возврат None)
+        3. Базовое описание с task_title
+        """
         hours = round(duration_minutes / 60, 1)
-        return f"Работа над задачей: {task_title[:50]} ({hours}ч)"
+
+        # Если есть git commits - используем их
+        if git_commits and len(git_commits) > 0:
+            commit_messages = [c['message'] for c in git_commits[:3]]
+            commits_text = "; ".join(commit_messages)
+            if len(commits_text) > 200:
+                commits_text = commits_text[:197] + "..."
+            return commits_text
+
+        # Иначе - базовое описание (пользователь должен отредактировать)
+        return f"[Требуется описание] {task_title[:40]} ({hours}ч)"
 
 
 # ============================================================================

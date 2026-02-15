@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('api', {
   markWorklogError: (id: string, errorMessage: string) =>
     ipcRenderer.invoke('mark-worklog-error', id, errorMessage),
   getWorklogsPath: () => ipcRenderer.invoke('get-worklogs-path'),
+  resetWorklogErrors: () => ipcRenderer.invoke('reset-worklog-errors'),
 
   // Jira config operations
   getJiraConfig: () => ipcRenderer.invoke('get-jira-config'),
@@ -172,6 +173,7 @@ declare global {
       markWorklogSynced: (id: string, jiraWorklogId: string) => Promise<{ success: boolean; error?: string }>;
       markWorklogError: (id: string, errorMessage: string) => Promise<{ success: boolean; error?: string }>;
       getWorklogsPath: () => Promise<string>;
+      resetWorklogErrors: () => Promise<{ success: boolean; resetCount: number; error?: string }>;
 
       // Jira config operations
       getJiraConfig: () => Promise<{ success: boolean; config?: JiraConfig; error?: string }>;

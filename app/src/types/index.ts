@@ -1,7 +1,8 @@
 // Task Center Types
 
 // Enums synchronized with Python (core/models.py)
-export type Priority = 5 | 4 | 3 | 2 | 1; // CRITICAL | HIGH | MEDIUM | LOW | BACKLOG
+// Support both numeric (1-5) and string formats for backward compatibility
+export type Priority = 5 | 4 | 3 | 2 | 1 | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'BACKLOG';
 export type Status = 'новая' | 'в работе' | 'завершена' | 'заблокирована' | 'выполнена';
 export type TaskType = 'Анализ/Исследование' | 'Документация' | 'Разработка' | 'Координация' | 'Баг/Проблема' | 'Неизвестно';
 export type Complexity = 'низкая' | 'средняя' | 'высокая';
@@ -48,13 +49,41 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   'Авто': '#4ade80',
 };
 
-export const PRIORITY_LABELS: Record<Priority, string> = {
-  5: 'Критично',      // CRITICAL
-  4: 'Высокий',       // HIGH
-  3: 'Средний',       // MEDIUM
-  2: 'Низкий',        // LOW
-  1: 'Бэклог',        // BACKLOG
+// Priority labels (Russian)
+export const PRIORITY_LABELS: Record<string, string> = {
+  '5': 'Критично',
+  '4': 'Высокий',
+  '3': 'Средний',
+  '2': 'Низкий',
+  '1': 'Бэклог',
+  'CRITICAL': 'Критично',
+  'HIGH': 'Высокий',
+  'MEDIUM': 'Средний',
+  'LOW': 'Низкий',
+  'BACKLOG': 'Бэклог',
 };
+
+// Normalize priority to string format for consistent comparison
+export function normalizePriority(priority: Priority): string {
+  const numericToString: Record<number, string> = {
+    5: 'CRITICAL',
+    4: 'HIGH',
+    3: 'MEDIUM',
+    2: 'LOW',
+    1: 'BACKLOG',
+  };
+
+  if (typeof priority === 'number') {
+    return numericToString[priority] || 'MEDIUM';
+  }
+  return priority;
+}
+
+// Get Russian label for priority
+export function getPriorityLabel(priority: Priority): string {
+  const normalized = normalizePriority(priority);
+  return PRIORITY_LABELS[normalized] || PRIORITY_LABELS[String(priority)] || String(priority);
+}
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   'Анализ/Исследование': 'Анализ',

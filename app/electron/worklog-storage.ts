@@ -1,6 +1,8 @@
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { withFileLock } from './file-lock';
 
 // Типы для worklogs
 interface LocalWorklog {
@@ -181,32 +183,32 @@ export function getPendingWorklogs(): { success: boolean; worklogs?: LocalWorklo
 }
 
 // Добавить новый worklog
-export function addWorklog(worklogData: Omit<LocalWorklog, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'syncedAt' | 'jiraWorklogId' | 'errorMessage'>): { success: boolean; worklog?: LocalWorklog; error?: string } {
+export async function addWorklog(worklogData: Omit<LocalWorklog, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'syncedAt' | 'jiraWorklogId' | 'errorMessage'>): Promise<{ success: boolean; worklog?: LocalWorklog; error?: string }> {
   try {
     ensureWorklogsFile();
-
-    // ✅ Создаем бэкап перед модификацией
     createBackup();
 
-    const content = fs.readFileSync(WORKLOGS_FILE_PATH, 'utf-8');
-    const data = JSON.parse(content) as WorklogsData;
+    return await withFileLock(WORKLOGS_FILE_PATH, async () => {
+      const content = await fsPromises.readFile(WORKLOGS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content) as WorklogsData;
 
-    const now = new Date().toISOString();
-    const newWorklog: LocalWorklog = {
-      ...worklogData,
-      id: crypto.randomUUID(),
-      status: 'pending',
-      syncedAt: null,
-      jiraWorklogId: null,
-      errorMessage: null,
-      createdAt: now,
-      updatedAt: now
-    };
+      const now = new Date().toISOString();
+      const newWorklog: LocalWorklog = {
+        ...worklogData,
+        id: crypto.randomUUID(),
+        status: 'pending',
+        syncedAt: null,
+        jiraWorklogId: null,
+        errorMessage: null,
+        createdAt: now,
+        updatedAt: now
+      };
 
-    data.worklogs.push(newWorklog);
-    fs.writeFileSync(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      data.worklogs.push(newWorklog);
+      await fsPromises.writeFile(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-    return { success: true, worklog: newWorklog };
+      return { success: true, worklog: newWorklog };
+    });
   } catch (error) {
     console.error('Error adding worklog:', error);
     return { success: false, error: String(error) };
@@ -214,29 +216,29 @@ export function addWorklog(worklogData: Omit<LocalWorklog, 'id' | 'createdAt' | 
 }
 
 // Обновить worklog
-export function updateWorklog(id: string, updates: Partial<LocalWorklog>): { success: boolean; worklog?: LocalWorklog; error?: string } {
+export async function updateWorklog(id: string, updates: Partial<LocalWorklog>): Promise<{ success: boolean; worklog?: LocalWorklog; error?: string }> {
   try {
     ensureWorklogsFile();
-
-    // ✅ Создаем бэкап перед модификацией
     createBackup();
 
-    const content = fs.readFileSync(WORKLOGS_FILE_PATH, 'utf-8');
-    const data = JSON.parse(content) as WorklogsData;
+    return await withFileLock(WORKLOGS_FILE_PATH, async () => {
+      const content = await fsPromises.readFile(WORKLOGS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content) as WorklogsData;
 
-    const index = data.worklogs.findIndex(w => w.id === id);
-    if (index === -1) {
-      return { success: false, error: 'Worklog not found' };
-    }
+      const index = data.worklogs.findIndex(w => w.id === id);
+      if (index === -1) {
+        return { success: false, error: 'Worklog not found' };
+      }
 
-    data.worklogs[index] = {
-      ...data.worklogs[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
+      data.worklogs[index] = {
+        ...data.worklogs[index],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
 
-    fs.writeFileSync(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
-    return { success: true, worklog: data.worklogs[index] };
+      await fsPromises.writeFile(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      return { success: true, worklog: data.worklogs[index] };
+    });
   } catch (error) {
     console.error('Error updating worklog:', error);
     return { success: false, error: String(error) };
@@ -244,25 +246,25 @@ export function updateWorklog(id: string, updates: Partial<LocalWorklog>): { suc
 }
 
 // Удалить worklog
-export function deleteWorklog(id: string): { success: boolean; error?: string } {
+export async function deleteWorklog(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     ensureWorklogsFile();
-
-    // ✅ Создаем бэкап перед модификацией
     createBackup();
 
-    const content = fs.readFileSync(WORKLOGS_FILE_PATH, 'utf-8');
-    const data = JSON.parse(content) as WorklogsData;
+    return await withFileLock(WORKLOGS_FILE_PATH, async () => {
+      const content = await fsPromises.readFile(WORKLOGS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content) as WorklogsData;
 
-    const index = data.worklogs.findIndex(w => w.id === id);
-    if (index === -1) {
-      return { success: false, error: 'Worklog not found' };
-    }
+      const index = data.worklogs.findIndex(w => w.id === id);
+      if (index === -1) {
+        return { success: false, error: 'Worklog not found' };
+      }
 
-    data.worklogs.splice(index, 1);
-    fs.writeFileSync(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      data.worklogs.splice(index, 1);
+      await fsPromises.writeFile(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
 
-    return { success: true };
+      return { success: true };
+    });
   } catch (error) {
     console.error('Error deleting worklog:', error);
     return { success: false, error: String(error) };
@@ -270,7 +272,7 @@ export function deleteWorklog(id: string): { success: boolean; error?: string } 
 }
 
 // Пометить worklog как синхронизированный
-export function markWorklogSynced(id: string, jiraWorklogId: string): { success: boolean; error?: string } {
+export async function markWorklogSynced(id: string, jiraWorklogId: string): Promise<{ success: boolean; error?: string }> {
   return updateWorklog(id, {
     status: 'synced',
     syncedAt: new Date().toISOString(),
@@ -280,11 +282,44 @@ export function markWorklogSynced(id: string, jiraWorklogId: string): { success:
 }
 
 // Пометить worklog с ошибкой
-export function markWorklogError(id: string, errorMessage: string): { success: boolean; error?: string } {
+export async function markWorklogError(id: string, errorMessage: string): Promise<{ success: boolean; error?: string }> {
   return updateWorklog(id, {
     status: 'error',
     errorMessage
   });
+}
+
+// Сбросить все ошибки worklogs (error -> pending)
+export async function resetWorklogErrors(): Promise<{ success: boolean; resetCount: number; error?: string }> {
+  try {
+    createBackup();
+
+    return await withFileLock(WORKLOGS_FILE_PATH, async () => {
+      const content = await fsPromises.readFile(WORKLOGS_FILE_PATH, 'utf-8');
+      const data = JSON.parse(content) as WorklogsData;
+
+      let resetCount = 0;
+      const now = new Date().toISOString();
+
+      for (const worklog of data.worklogs) {
+        if (worklog.status === 'error') {
+          worklog.status = 'pending';
+          worklog.errorMessage = null;
+          worklog.updatedAt = now;
+          resetCount++;
+        }
+      }
+
+      if (resetCount > 0) {
+        await fsPromises.writeFile(WORKLOGS_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      }
+
+      return { success: true, resetCount };
+    });
+  } catch (error) {
+    console.error('Error resetting worklog errors:', error);
+    return { success: false, resetCount: 0, error: String(error) };
+  }
 }
 
 // Получить путь к файлу

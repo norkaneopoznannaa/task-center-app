@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Task, TaskFilters, SortConfig, SortField, Priority, Status } from '../types';
 import { TaskRow } from '../components/TaskRow';
 import { DailyPlan } from '../components/DailyPlan';
 import './TasksPage.css';
+
+const PINNED_TASKS_KEY = 'dailyPlan_pinnedTasks';
 
 interface TasksPageProps {
   tasks: Task[];
@@ -52,9 +54,40 @@ export function TasksPage({
   onDeleteTask,
   onDuplicateTask,
 }: TasksPageProps) {
-  // Filter tasks
+  // State for pinned tasks (manually added to daily plan)
+  const [pinnedTaskIds, setPinnedTaskIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(PINNED_TASKS_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Handler to add task to daily plan
+  const handleAddToDailyPlan = useCallback((taskId: string) => {
+    setPinnedTaskIds(prev => {
+      if (prev.includes(taskId)) {
+        // Already pinned - remove it
+        const updated = prev.filter(id => id !== taskId);
+        localStorage.setItem(PINNED_TASKS_KEY, JSON.stringify(updated));
+        return updated;
+      } else {
+        // Add to pinned
+        const updated = [...prev, taskId];
+        localStorage.setItem(PINNED_TASKS_KEY, JSON.stringify(updated));
+        return updated;
+      }
+    });
+  }, []);
+
+  // Filter tasks (exclude completed by default)
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
+      // Always exclude completed tasks from main view
+      if (task.status === 'завершена' || task.status === 'выполнена') {
+        return false;
+      }
       // Status filter
       if (filters.status !== 'all' && task.status !== filters.status) {
         return false;
@@ -63,8 +96,8 @@ export function TasksPage({
       if (filters.priority !== 'all' && task.priority !== filters.priority) {
         return false;
       }
-      // Category filter
-      if (filters.category !== 'all' && task.category !== filters.category) {
+      // Category filter (case-insensitive)
+      if (filters.category !== 'all' && task.category?.toLowerCase() !== filters.category.toLowerCase()) {
         return false;
       }
       // Search filter
@@ -149,6 +182,7 @@ export function TasksPage({
           onTaskClick={onTaskSelect}
           onStartTimer={onStartTracking}
           activeTimers={activeTimers}
+          pinnedTaskIds={pinnedTaskIds}
         />
       </div>
 
@@ -220,6 +254,7 @@ export function TasksPage({
                   onEditTask={onEditTask}
                   onDeleteTask={onDeleteTask}
                   onDuplicateTask={onDuplicateTask}
+                  onAddToDailyPlan={handleAddToDailyPlan}
                 />
               ))
             )}

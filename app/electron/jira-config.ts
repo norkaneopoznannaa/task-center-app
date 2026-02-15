@@ -4,6 +4,9 @@ import * as https from 'https';
 import * as http from 'http';
 import { encrypt, decrypt, isEncrypted, saveCredentials, loadCredentials, deleteCredentials } from './credential-store';
 
+// Timeout for Jira HTTP requests (ms)
+const JIRA_REQUEST_TIMEOUT = 10000;
+
 // Типы для Jira конфигурации
 interface JiraConfig {
   baseUrl: string;
@@ -187,6 +190,11 @@ export async function loginToJira(username: string, password: string): Promise<{
       });
     });
 
+    req.setTimeout(JIRA_REQUEST_TIMEOUT, () => {
+      req.destroy();
+      resolve({ success: false, error: `Connection timeout (${JIRA_REQUEST_TIMEOUT / 1000}s)` });
+    });
+
     req.on('error', (error) => {
       console.error('Jira login error:', error);
       resolve({ success: false, error: error.message });
@@ -293,6 +301,11 @@ function makeJiraRequest(
       });
     });
 
+    req.setTimeout(JIRA_REQUEST_TIMEOUT, () => {
+      req.destroy();
+      resolve({ success: false, error: `Connection timeout (${JIRA_REQUEST_TIMEOUT / 1000}s)` });
+    });
+
     req.on('error', (error) => {
       console.error('Jira request error:', error);
       resolve({ success: false, error: error.message });
@@ -367,6 +380,12 @@ export async function logoutFromJira(): Promise<{ success: boolean; error?: stri
     };
 
     const req = httpModule.request(options, () => {
+      currentSession = null;
+      resolve({ success: true });
+    });
+
+    req.setTimeout(JIRA_REQUEST_TIMEOUT, () => {
+      req.destroy();
       currentSession = null;
       resolve({ success: true });
     });

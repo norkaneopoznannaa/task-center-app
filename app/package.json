@@ -1,6 +1,6 @@
 {
   "name": "task-center-app",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Desktop приложение для визуализации и управления задачами Task Center",
   "main": "dist/electron/main.js",
   "author": "Task Center Team",
